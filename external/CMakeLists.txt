@@ -105,3 +105,6 @@ target_include_directories(imgui PUBLIC
     imgui
     imgui/backends
 )
+
+
+add_subdirectory(fmt EXCLUDE_FROM_ALL)
