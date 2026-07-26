@@ -6,7 +6,9 @@ int main(void)
 
 	engine.init();	
 	
-	engine.run();	
+	if (engine._isInitialized) {
+		engine.run();
+	}	
 
 	engine.cleanup();	
 
