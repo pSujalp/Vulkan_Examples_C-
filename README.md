@@ -10,7 +10,7 @@ This project uses **CMake** and supports **Windows**, **Linux**, and **macOS**.
 - GLFW
 - GLM
 
-## After Installation, just use Makefile for building
+## After Installation, just use Makefile for building and running the application
 
 ``` make clean && make && make run ```
 
