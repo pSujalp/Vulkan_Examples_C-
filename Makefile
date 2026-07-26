@@ -1,10 +1,28 @@
-
 BUILD_DIR := build
 BIN_DIR := $(BUILD_DIR)/bin
 SHADER_DIR := shaders
 
 CMAKE := cmake
 GLSLANG := glslangValidator
+
+
+ifeq ($(OS),Windows_NT)
+    EXE := Vulkan_tutorial.exe
+    MKDIR := if not exist "$(BIN_DIR)" mkdir "$(BIN_DIR)"
+    COPY_DIR := xcopy /E /I /Y
+    RM := rmdir /S /Q
+    DELETE_SPV := del /S /Q
+else
+    UNAME_S := $(shell uname -s)
+
+    EXE := Vulkan_tutorial
+
+    MKDIR := mkdir -p $(BIN_DIR)
+    COPY_DIR := cp -R
+    RM := rm -rf
+    DELETE_SPV := find shaders -name "*.spv" -delete
+endif
+
 
 VERT_SHADERS := $(wildcard $(SHADER_DIR)/*.vert)
 FRAG_SHADERS := $(wildcard $(SHADER_DIR)/*.frag)
@@ -34,15 +52,15 @@ SHADERS := \
 SPV := $(SHADERS:%=%.spv)
 
 
-all: shaders configure build copy
 
+all: shaders configure build copy
 
 configure:
 	$(CMAKE) -S . -B $(BUILD_DIR)
 
-
 build:
 	$(CMAKE) --build $(BUILD_DIR) -j
+
 
 
 shaders: $(SPV)
@@ -82,20 +100,33 @@ shaders: $(SPV)
 
 
 copy:
-	mkdir -p $(BIN_DIR)
-	cp -R assets $(BIN_DIR)/
-	cp -R shaders $(BIN_DIR)/
+ifeq ($(OS),Windows_NT)
+	$(MKDIR)
+	$(COPY_DIR) assets $(BIN_DIR)\assets >nul
+	$(COPY_DIR) shaders $(BIN_DIR)\shaders >nul
+else
+	$(MKDIR)
+	$(COPY_DIR) assets $(BIN_DIR)/
+	$(COPY_DIR) shaders $(BIN_DIR)/
+endif
+
 
 
 run: all
-	$(BIN_DIR)/Vulkan_tutorial
+	$(BIN_DIR)/$(EXE)
+
 
 rebuild:
-	rm -rf $(BUILD_DIR)
+	$(MAKE) clean
 	$(MAKE) all
 
 clean:
-	rm -rf $(BUILD_DIR)
-	find shaders -name "*.spv" -delete
+ifeq ($(OS),Windows_NT)
+	-$(RM) $(BUILD_DIR)
+	-$(DELETE_SPV) shaders\*.spv
+else
+	$(RM) $(BUILD_DIR)
+	$(DELETE_SPV)
+endif
 
 .PHONY: all configure build shaders copy run rebuild clean

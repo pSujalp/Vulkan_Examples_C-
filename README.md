@@ -10,9 +10,16 @@ This project uses **CMake** and supports **Windows**, **Linux**, and **macOS**.
 - GLFW
 - GLM
 
+## After Installation, just use Makefile for building
+
+``` make clean && make && make run ```
+
 ---
 
-# Windows
+# Installation
+
+### Windows 
+---
 
 ## Install Visual Studio
 
