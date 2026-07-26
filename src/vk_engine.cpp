@@ -31,10 +31,7 @@ void VulkanEngine::init()
 		window_flags
 	);
 
-	if (!init_vulkan()) {
-		fprintf(stderr, "init_vulkan failed, aborting engine init\n");
-		return;
-	}
+	bool b = init_vulkan();
 
 	init_swapchain();
 
@@ -218,68 +215,63 @@ void VulkanEngine::run()
 		}
 	}
 }
-
-void VulkanEngine::init_vulkan()
+bool VulkanEngine::init_vulkan()
 {
-//> init_instance
-	vkb::InstanceBuilder builder;
+    vkb::InstanceBuilder builder;
 
-	//make the vulkan instance, with basic debug features
-	auto inst_ret = builder.set_app_name("Example Vulkan Application")
-		.request_validation_layers(bUseValidationLayers)
-		.use_default_debug_messenger()
-		.require_api_version(1, 3, 0)
-		.build();
+    auto inst_ret = builder.set_app_name("Example Vulkan Application")
+        .request_validation_layers(bUseValidationLayers)
+        .use_default_debug_messenger()
+        .require_api_version(1, 3, 0)
+        .build();
 
-	vkb::Instance vkb_inst = inst_ret.value();
+    if (!inst_ret) {
+        fprintf(stderr, "Failed to create Vulkan instance: %s\n", inst_ret.error().message().c_str());
+        return false;
+    }
+    vkb::Instance vkb_inst = inst_ret.value();
+    _instance = vkb_inst.instance;
+    _debug_messenger = vkb_inst.debug_messenger;
 
-	//grab the instance 
-	_instance = vkb_inst.instance;
-	_debug_messenger = vkb_inst.debug_messenger;
+    SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
 
-//< init_instance
-// 
-//> init_device
-	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+    VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    features.dynamicRendering = true;
+    features.synchronization2 = true;
 
-	//vulkan 1.3 features
-	VkPhysicalDeviceVulkan13Features features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
-	features.dynamicRendering = true;
-	features.synchronization2 = true;
+    VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    features12.bufferDeviceAddress = true;
+    features12.descriptorIndexing = true;
 
-	//vulkan 1.2 features
-	VkPhysicalDeviceVulkan12Features features12{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-	features12.bufferDeviceAddress = true;
-	features12.descriptorIndexing = true;
+    vkb::PhysicalDeviceSelector selector{ vkb_inst };
+    auto phys_ret = selector
+        .set_minimum_version(1, 3)
+        .set_required_features_13(features)
+        .set_required_features_12(features12)
+        .set_surface(_surface)
+        .select();
 
+    if (!phys_ret) {
+        fprintf(stderr, "Failed to select physical device: %s\n", phys_ret.error().message().c_str());
+        return false;
+    }
+    vkb::PhysicalDevice physicalDevice = phys_ret.value();
 
-	//use vkbootstrap to select a gpu. 
-	//We want a gpu that can write to the SDL surface and supports vulkan 1.3 with the correct features
-	vkb::PhysicalDeviceSelector selector{ vkb_inst };
-	vkb::PhysicalDevice physicalDevice = selector
-		.set_minimum_version(1, 3)
-		.set_required_features_13(features)
-		.set_required_features_12(features12)
-		.set_surface(_surface)
-		.select()
-		.value();
+    vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+    auto dev_ret = deviceBuilder.build();
+    if (!dev_ret) {
+        fprintf(stderr, "Failed to create device: %s\n", dev_ret.error().message().c_str());
+        return false;
+    }
+    vkb::Device vkbDevice = dev_ret.value();
 
+    _device = vkbDevice.device;
+    _chosenGPU = physicalDevice.physical_device;
 
-	//create the final vulkan device
-	vkb::DeviceBuilder deviceBuilder{ physicalDevice };
+    _graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
+    _graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
-	vkb::Device vkbDevice = deviceBuilder.build().value();
-
-	// Get the VkDevice handle used in the rest of a vulkan application
-	_device = vkbDevice.device;
-	_chosenGPU = physicalDevice.physical_device;
-//< init_device
-
-//> init_queue
-	// use vkbootstrap to get a Graphics queue
-	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
-	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-//< init_queue
+    return true;
 }
 
 //> init_swap

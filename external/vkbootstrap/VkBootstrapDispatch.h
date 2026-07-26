@@ -5046,26 +5046,26 @@ struct DispatchTable {
         return fp_vkCreateExecutionGraphPipelinesAMDX(device, pipelineCache, createInfoCount, pCreateInfos, pAllocator, pPipelines);
     }
 #endif
-#if (defined(VK_AMDX_shader_enqueue))
-    void cmdInitializeGraphScratchMemoryAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch) const noexcept {
-        fp_vkCmdInitializeGraphScratchMemoryAMDX(commandBuffer, scratch);
-    }
-#endif
-#if (defined(VK_AMDX_shader_enqueue))
-    void cmdDispatchGraphAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, const VkDispatchGraphCountInfoAMDX* pCountInfo) const noexcept {
-        fp_vkCmdDispatchGraphAMDX(commandBuffer, scratch, pCountInfo);
-    }
-#endif
-#if (defined(VK_AMDX_shader_enqueue))
-    void cmdDispatchGraphIndirectAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, const VkDispatchGraphCountInfoAMDX* pCountInfo) const noexcept {
-        fp_vkCmdDispatchGraphIndirectAMDX(commandBuffer, scratch, pCountInfo);
-    }
-#endif
-#if (defined(VK_AMDX_shader_enqueue))
-    void cmdDispatchGraphIndirectCountAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, VkDeviceAddress countInfo) const noexcept {
-        fp_vkCmdDispatchGraphIndirectCountAMDX(commandBuffer, scratch, countInfo);
-    }
-#endif
+// #if (defined(VK_AMDX_shader_enqueue))
+//     void cmdInitializeGraphScratchMemoryAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch) const noexcept {
+//         fp_vkCmdInitializeGraphScratchMemoryAMDX(commandBuffer, scratch);
+//     }
+// #endif
+// #if (defined(VK_AMDX_shader_enqueue))
+//     void cmdDispatchGraphAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, const VkDispatchGraphCountInfoAMDX* pCountInfo) const noexcept {
+//         fp_vkCmdDispatchGraphAMDX(commandBuffer, scratch, pCountInfo);
+//     }
+// #endif
+// #if (defined(VK_AMDX_shader_enqueue))
+//     void cmdDispatchGraphIndirectAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, const VkDispatchGraphCountInfoAMDX* pCountInfo) const noexcept {
+//         fp_vkCmdDispatchGraphIndirectAMDX(commandBuffer, scratch, pCountInfo);
+//     }
+// #endif
+// #if (defined(VK_AMDX_shader_enqueue))
+//     void cmdDispatchGraphIndirectCountAMDX(VkCommandBuffer commandBuffer, VkDeviceAddress scratch, VkDeviceAddress countInfo) const noexcept {
+//         fp_vkCmdDispatchGraphIndirectCountAMDX(commandBuffer, scratch, countInfo);
+//     }
+// #endif
 #if (defined(VK_KHR_maintenance6))
     void cmdBindDescriptorSets2KHR(VkCommandBuffer commandBuffer, const VkBindDescriptorSetsInfoKHR* pBindDescriptorSetsInfo) const noexcept {
         fp_vkCmdBindDescriptorSets2KHR(commandBuffer, pBindDescriptorSetsInfo);

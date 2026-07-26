@@ -69,7 +69,7 @@ public:
 	bool stop_rendering{false};
 private:
 
-	void init_vulkan();
+	bool init_vulkan();
 
 	void init_swapchain();
 
