@@ -5,6 +5,10 @@
 
 #include <vk_types.h>
 #include <vector>
+#include "DeletionQueue.h" 
+#include "vk_mem_alloc.h"
+
+
 
 //> framedata
 struct FrameData {
@@ -13,7 +17,12 @@ struct FrameData {
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
+
+	DeletionQueue _deletionQueue;
 };
+
+
+
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 //< framedata
@@ -34,12 +43,14 @@ public:
 	VkPhysicalDevice _chosenGPU;// GPU chosen as the default device
 	VkDevice _device; // Vulkan device for commands
 	VkSurfaceKHR _surface;// Vulkan window surface
+
+	VmaAllocator _allocator;
 //< inst_init
 
 //> queues
 	FrameData _frames[FRAME_OVERLAP];
 
-	FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
+	FrameData& get_current_frame()  { return _frames[_frameNumber % FRAME_OVERLAP]; };
 
 	VkQueue _graphicsQueue;
 	uint32_t _graphicsQueueFamily;
@@ -52,6 +63,11 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 	VkExtent2D _swapchainExtent;
+
+	DeletionQueue _mainDeletionQueue;
+
+	AllocatedImage _drawImage;
+	VkExtent2D _drawExtent;
 //< swap_init
 
 	//initializes everything in the engine
@@ -79,4 +95,8 @@ private:
 	void init_commands();
 
 	void init_sync_structures();
+
+	void draw_background(VkCommandBuffer cmd);
+
+
 };
