@@ -167,7 +167,7 @@ https://brew.sh
 ## Install Dependencies
 
 ```bash
-brew install glfw glm
+brew install glfw glm glslang
 ```
 
 ---
