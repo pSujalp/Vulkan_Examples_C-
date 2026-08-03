@@ -24,7 +24,9 @@ add_executable(${PROJECT_NAME}
     src/vk_engine.cpp
     src/vk_initializers.cpp
     src/vk_images.cpp
+    src/vk_descriptors.cpp
     src/vulk_implementation.cpp
+    src/vk_pipelines.cpp
 )
 
 

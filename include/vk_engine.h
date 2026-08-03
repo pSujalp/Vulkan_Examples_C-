@@ -8,6 +8,9 @@
 #include "DeletionQueue.h" 
 #include "vk_mem_alloc.h"
 
+#include <vk_descriptors.h>
+
+#include "vk_pipelines.h"
 
 
 //> framedata
@@ -68,6 +71,14 @@ public:
 
 	AllocatedImage _drawImage;
 	VkExtent2D _drawExtent;
+
+	DescriptorAllocator globalDescriptorAllocator;
+
+	VkDescriptorSet _drawImageDescriptors;
+	VkDescriptorSetLayout _drawImageDescriptorLayout;
+
+		VkPipeline _gradientPipeline;
+	VkPipelineLayout _gradientPipelineLayout;
 //< swap_init
 
 	//initializes everything in the engine
@@ -84,6 +95,7 @@ public:
 
 	bool stop_rendering{false};
 private:
+    void init_descriptors();
 
 	bool init_vulkan();
 
@@ -97,6 +109,9 @@ private:
 	void init_sync_structures();
 
 	void draw_background(VkCommandBuffer cmd);
+
+	void init_pipelines();
+	void init_background_pipelines();
 
 
 };
