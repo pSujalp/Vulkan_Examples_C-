@@ -1,42 +1,78 @@
-# Build Instructions
+# Vulkan Tutorial
 
-This project uses **CMake** and supports **Windows**, **Linux**, and **macOS**.
+A cross-platform Vulkan renderer built with **CMake** supporting **Windows**, **Linux**, and **macOS**.
 
-## Prerequisites
+## Features
 
-- CMake 3.20 or newer
+- Cross-platform (Windows, Linux, macOS)
+- C++23
+- Vulkan API
+- GLFW
+- GLM
+- Automatic shader compilation via `glslangValidator`
+- Asset and shader copying through the provided Makefile
+
+---
+
+# Prerequisites
+
+Before building, ensure the following are installed:
+
+- CMake **3.20+**
 - A C++23 compatible compiler
 - Vulkan SDK
 - GLFW
 - GLM
+- glslang (required for shader compilation)
 
-## After Installation, just use Makefile for building and running the application
+---
 
-``` make clean && make && make run ```
+# Quick Start
+
+After installing the required dependencies for your platform:
+
+```bash
+make clean
+make
+make run
+```
+
+or simply
+
+```bash
+make clean && make && make run
+```
+
+The Makefile will automatically:
+
+- Configure CMake
+- Build the project
+- Compile all shaders to SPIR-V
+- Copy assets into the output directory
+- Launch the application
 
 ---
 
 # Installation
 
-### Windows 
----
+## Windows
 
-## Install Visual Studio
+### 1. Install Visual Studio
 
-Install **Visual Studio 2022** with the following workloads:
+Install **Visual Studio 2022** with:
 
 - Desktop development with C++
 - C++ CMake tools
 
 ---
 
-## Install Vulkan SDK
+### 2. Install the Vulkan SDK
 
-Download and install the latest Vulkan SDK:
+Download the latest SDK from:
 
 https://vulkan.lunarg.com/sdk/home
 
-Verify installation:
+Verify the installation:
 
 ```powershell
 vulkaninfo
@@ -44,17 +80,19 @@ vulkaninfo
 
 ---
 
-## Install vcpkg (Recommended)
+### 3. Install vcpkg (Recommended)
 
 Clone vcpkg:
 
 ```powershell
 git clone https://github.com/microsoft/vcpkg.git
+
 cd vcpkg
+
 bootstrap-vcpkg.bat
 ```
 
-Install dependencies:
+Install the required libraries:
 
 ```powershell
 vcpkg install glfw3
@@ -63,18 +101,18 @@ vcpkg install glm
 
 ---
 
-## Configure
+### 4. Configure
 
 ```powershell
 cmake -B build -S . ^
     -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 ```
 
-Replace the toolchain path with your own vcpkg installation.
+Replace the toolchain path with the location of your own vcpkg installation.
 
 ---
 
-## Build
+### 5. Build
 
 ```powershell
 cmake --build build --config Release
@@ -82,7 +120,7 @@ cmake --build build --config Release
 
 ---
 
-## Run
+### 6. Run
 
 ```powershell
 build\bin\Release\Vulkan_tutorial.exe
@@ -105,7 +143,8 @@ sudo apt install \
     libvulkan-dev \
     vulkan-tools \
     libglfw3-dev \
-    libglm-dev
+    libglm-dev \
+    glslang-tools
 ```
 
 Verify Vulkan:
@@ -144,13 +183,12 @@ cmake --build build
 
 > **Note**
 >
-> Apple does **not** support native Vulkan.
->
-> Vulkan applications run through **MoltenVK**, which translates Vulkan commands to Apple's Metal API.
+> Apple does **not** provide native Vulkan support.
+> Vulkan applications run through **MoltenVK**, which translates Vulkan calls to Apple's Metal API.
 
 ---
 
-## Install Xcode Command Line Tools
+## 1. Install Xcode Command Line Tools
 
 ```bash
 xcode-select --install
@@ -158,13 +196,13 @@ xcode-select --install
 
 ---
 
-## Install Homebrew
+## 2. Install Homebrew
 
 https://brew.sh
 
 ---
 
-## Install Dependencies
+## 3. Install Dependencies
 
 ```bash
 brew install glfw glm glslang
@@ -172,27 +210,27 @@ brew install glfw glm glslang
 
 ---
 
-## Install Vulkan SDK
+## 4. Install the Vulkan SDK
 
-Download the latest SDK from:
+Download the latest SDK:
 
 https://vulkan.lunarg.com/sdk/home
 
-Install the macOS `.dmg`.
+Install the macOS `.dmg` package.
 
-Verify:
+Verify the installation:
 
 ```bash
 vulkaninfo
 ```
 
-If `vulkaninfo` is not found, reload your shell:
+If `vulkaninfo` cannot be found:
 
 ```bash
 source ~/.zshrc
 ```
 
-If necessary, add the SDK to your environment:
+If necessary, manually configure the SDK:
 
 ```bash
 export VULKAN_SDK=$HOME/VulkanSDK/<version>/macOS
@@ -200,6 +238,53 @@ export PATH=$VULKAN_SDK/bin:$PATH
 ```
 
 ---
+
+## 5. Configure
+
+```bash
+cmake -B build -S .
+```
+
+---
+
+## 6. Build
+
+```bash
+cmake --build build
+```
+
+---
+
+## 7. Run
+
+```bash
+./build/bin/Vulkan_tutorial
+```
+
+---
+
+# Project Structure
+
+```text
+Vulkan_tutorial
+│
+├── assets/              # Models, textures, fonts, etc.
+├── build/               # Generated build files
+├── external/            # Third-party libraries
+├── include/             # Header files
+├── lib/                 # Additional libraries
+├── shaders/             # GLSL shaders
+│
+├── src/                 # Source files
+│
+├── CMakeLists.txt
+├── Makefile
+└── README.md
+```
+
+---
+
+# Common Commands
 
 ## Configure
 
@@ -220,51 +305,28 @@ cmake --build build
 ## Run
 
 ```bash
-./build/bin/Vulkan_tutorial
+make run
 ```
 
 ---
 
-# Project Structure
+## Clean
 
-```text
-Vulkan_tutorial/
-│
-├── CMakeLists.txt
-├── README.md
-│
-├── src/
-├── include/
-├── shaders/
-├── assets/
-├── external/
-├── lib/
-└── build/
+```bash
+make clean
 ```
 
 ---
 
-# Common Commands
+## Delete Build Directory
 
-Generate build files:
-
-```bash
-cmake -B build -S .
-```
-
-Build project:
-
-```bash
-cmake --build build
-```
-
-Delete build directory:
+Linux/macOS
 
 ```bash
 rm -rf build
 ```
 
-Windows PowerShell:
+Windows PowerShell
 
 ```powershell
 Remove-Item build -Recurse -Force
@@ -276,50 +338,91 @@ Remove-Item build -Recurse -Force
 
 ## Could NOT find Vulkan
 
-Install the Vulkan SDK and verify with:
+Ensure the Vulkan SDK is correctly installed.
+
+Verify:
 
 ```bash
 vulkaninfo
 ```
 
+If this command fails, reinstall the SDK or ensure its `bin` directory is present in your system `PATH`.
+
 ---
 
-## No SOURCES given to target
+## GLFW Not Found
 
-Ensure your project contains:
+Install GLFW using your platform's package manager.
+
+Examples:
+
+- Windows: `vcpkg install glfw3`
+- Ubuntu: `sudo apt install libglfw3-dev`
+- macOS: `brew install glfw`
+
+---
+
+## GLM Not Found
+
+Install GLM:
+
+- Windows: `vcpkg install glm`
+- Ubuntu: `sudo apt install libglm-dev`
+- macOS: `brew install glm`
+
+---
+
+## glslangValidator Not Found
+
+Install glslang:
+
+Ubuntu:
+
+```bash
+sudo apt install glslang-tools
+```
+
+macOS:
+
+```bash
+brew install glslang
+```
+
+Verify:
+
+```bash
+glslangValidator --version
+```
+
+---
+
+## No SOURCES Given to Target
+
+Ensure your project contains a valid source file such as:
 
 ```text
 src/main.cpp
 ```
 
-or update `CMakeLists.txt` to include your source files.
-
----
-
-## GLFW not found
-
-Install GLFW using your platform's package manager or vcpkg.
-
----
-
-## GLM not found
-
-Install GLM using your platform's package manager or vcpkg.
+or update `CMakeLists.txt` to include all required source files.
 
 ---
 
 ## macOS: No Physical Devices Found
 
-Make sure:
+This typically indicates that MoltenVK is unavailable.
 
-- MoltenVK is installed (included with the Vulkan SDK).
-- `VK_ENABLE_BETA_EXTENSIONS` is enabled in the CMake configuration.
+Ensure:
+
+- The Vulkan SDK is installed
+- MoltenVK is included (bundled with the SDK)
+- The Vulkan SDK environment variables are correctly configured
 
 ---
 
 # Recommended IDEs
 
-- Visual Studio 2022 (Windows)
+- Visual Studio 2022
 - Visual Studio Code
 - CLion
 - Xcode (macOS)
@@ -328,9 +431,17 @@ Make sure:
 
 # Useful Resources
 
-- Vulkan Tutorial: https://vulkan-tutorial.com
-- Vulkan SDK: https://vulkan.lunarg.com/sdk/home
-- GLFW: https://www.glfw.org
-- GLM: https://github.com/g-truc/glm
-- MoltenVK: https://github.com/KhronosGroup/MoltenVK
-- Vulkan Samples: https://github.com/KhronosGroup/Vulkan-Samples
+| Resource | Link |
+|----------|------|
+| Vulkan Tutorial | https://vulkan-tutorial.com |
+| Vulkan SDK | https://vulkan.lunarg.com/sdk/home |
+| Vulkan Samples | https://github.com/KhronosGroup/Vulkan-Samples |
+| MoltenVK | https://github.com/KhronosGroup/MoltenVK |
+| GLFW | https://www.glfw.org |
+| GLM | https://github.com/g-truc/glm |
+
+---
+
+# License
+
+This project is intended for educational purposes and follows the Vulkan Tutorial while incorporating additional features and improvements.
