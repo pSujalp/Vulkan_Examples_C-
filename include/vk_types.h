@@ -21,7 +21,7 @@
 #include <glm/vec4.hpp>
 #include <iostream>
 #include <fstream>
-
+#include "DeletionQueue.h"
 
 
 // we will add our main reusable types here

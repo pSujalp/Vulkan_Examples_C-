@@ -46,6 +46,8 @@ public:
 
 	VkPipeline _trianglePipeline;
 
+	DeletionQueue _mainDeletionQueue;
+
 	//initializes everything in the engine
 	void init();
 
