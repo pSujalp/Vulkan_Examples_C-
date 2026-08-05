@@ -5,6 +5,9 @@
 
 #include <vk_types.h>
 #include <vector>
+#include "PipelineBuilder.h"
+
+
 
 class VulkanEngine {
 public:
@@ -12,7 +15,7 @@ public:
 	bool _isInitialized{ false };
 	int _frameNumber {0};
 
-	VkExtent2D _windowExtent{ 1700 , 900 };
+	VkExtent2D _windowExtent{ 800 , 600 };
 
 	struct SDL_Window* _window{ nullptr };
 
@@ -40,6 +43,9 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
+
+	VkPipeline _trianglePipeline;
+
 	//initializes everything in the engine
 	void init();
 
@@ -51,6 +57,13 @@ public:
 
 	//run main loop
 	void run();
+
+	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+
+	void init_pipelines();
+
+	VkPipelineLayout _trianglePipelineLayout;
+
 
 private:
 
