@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
     src/vulk_implementation.cpp
     src/vk_pipelines.cpp
     src/PipelineBuilder.cpp
+    src/vk_mesh.cpp
 )
 
 

@@ -19,6 +19,7 @@
 
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
+#include <glm/vec3.hpp>
 #include <iostream>
 #include <fstream>
 #include "DeletionQueue.h"
@@ -34,9 +35,9 @@ struct AllocatedImage {
 };
 
 struct AllocatedBuffer {
-    VkBuffer buffer;
-    VmaAllocation allocation;
-    VmaAllocationInfo info;
+    VkBuffer _buffer;
+    VmaAllocation _allocation;
+    VmaAllocationInfo _info;
 };
 
 struct GPUGLTFMaterial {
@@ -74,13 +75,14 @@ struct MaterialInstance {
 };
 //< mat_types
 //> vbuf_types
-struct Vertex {
+struct VertexInputDescription;
 
+struct Vertex {
 	glm::vec3 position;
-	float uv_x;
 	glm::vec3 normal;
-	float uv_y;
-	glm::vec4 color;
+	glm::vec3 color;
+
+	static VertexInputDescription get_vertex_description();
 };
 
 // holds the resources needed for a mesh

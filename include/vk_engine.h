@@ -6,6 +6,7 @@
 #include <vk_types.h>
 #include <vector>
 #include "PipelineBuilder.h"
+#include <vk_mesh.h>
 
 
 
@@ -48,7 +49,17 @@ public:
 
 	DeletionQueue _mainDeletionQueue;
 
-	//initializes everything in the engine
+	VmaAllocator _allocator;
+
+
+	VkPipeline _meshPipeline;
+	Mesh _triangleMesh;
+
+
+	void load_meshes();
+
+	void upload_mesh(Mesh& mesh);
+
 	void init();
 
 	//shuts down the engine
