@@ -59,6 +59,8 @@ void VulkanEngine::cleanup()
 
 		vkDestroyCommandPool(_device, _commandPool, nullptr);
 
+		vmaDestroyAllocator(_allocator);
+
 		
 		vkDestroyFence(_device, _renderFence, nullptr);
 		vkDestroySemaphore(_device, _renderSemaphore, nullptr);
@@ -131,7 +133,7 @@ void VulkanEngine::draw()
 	
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
-	//bind the mesh vertex buffer with offset 0
+	
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer, &offset);
 
