@@ -7,6 +7,7 @@
 #include <vector>
 #include "PipelineBuilder.h"
 #include <vk_mesh.h>
+#include <glm/gtx/transform.hpp>
 
 
 
@@ -76,6 +77,8 @@ public:
 	void init_pipelines();
 
 	VkPipelineLayout _trianglePipelineLayout;
+
+	VkPipelineLayout _meshPipelineLayout;
 
 
 private:

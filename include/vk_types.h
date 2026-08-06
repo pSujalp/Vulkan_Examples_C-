@@ -16,7 +16,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vk_mem_alloc.h>
-
+#include <glm/glm.hpp>
 #include <glm/mat4x4.hpp>
 #include <glm/vec4.hpp>
 #include <glm/vec3.hpp>
@@ -137,6 +137,17 @@ struct Node : public IRenderable {
         }
     }
 };
+
+
+
+
+
+struct MeshPushConstants {
+	glm::vec4 data;
+	glm::mat4 render_matrix;
+};
+
+
 //< node_types
 //> intro
 #define VK_CHECK(x)                                                     \
