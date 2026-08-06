@@ -27,9 +27,9 @@
 
 // we will add our main reusable types here
 struct AllocatedImage {
-    VkImage image;
+    VkImage _image;
     VkImageView imageView;
-    VmaAllocation allocation;
+    VmaAllocation _allocation;
     VkExtent3D imageExtent;
     VkFormat imageFormat;
 };

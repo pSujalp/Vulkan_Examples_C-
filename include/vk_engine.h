@@ -52,6 +52,10 @@ public:
 
 	VmaAllocator _allocator;
 
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+	VkFormat _depthFormat;
+
 
 	VkPipeline _meshPipeline;
 	Mesh _triangleMesh;
