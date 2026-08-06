@@ -56,6 +56,8 @@ public:
 	VkPipeline _meshPipeline;
 	Mesh _triangleMesh;
 
+	Mesh _monkeyMesh;
+
 
 	void load_meshes();
 

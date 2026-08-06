@@ -157,6 +157,10 @@ void VulkanEngine::draw()
 
     //we can now draw
     vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
+    vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer, &offset);
+
+    //we can now draw the mesh
+    vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
 
 	
 	vkCmdEndRenderPass(cmd);
@@ -586,8 +590,6 @@ void VulkanEngine::init_pipelines()
     });
 
 	_mainDeletionQueue.push_function([=]() {
-        	//other deletions
-
 		vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
 	});
 }
@@ -609,9 +611,13 @@ void VulkanEngine::load_meshes()
 	_triangleMesh._vertices[1].color = glm::vec3{ 0.0f, 1.0f, 0.0f }; 
 	_triangleMesh._vertices[2].color = glm::vec3{ 0.0f, 0.0f, 1.0f }; 
 
+	_monkeyMesh.load_from_obj("assets/monkey_smooth.obj");
+
 	
 
 	upload_mesh(_triangleMesh);
+
+	upload_mesh(_monkeyMesh);
 }
 
 
