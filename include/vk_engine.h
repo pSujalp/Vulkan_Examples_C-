@@ -9,17 +9,32 @@
 #include <vk_mesh.h>
 #include <glm/gtx/transform.hpp>
 
+#include <unordered_map>
 
+struct Material
+{
+	VkPipeline pipeline;
+	VkPipelineLayout pipelineLayout;
+};
 
-class VulkanEngine {
+struct RenderObject
+{
+	Mesh *mesh;
+
+	Material *material;
+
+	glm::mat4 transformMatrix;
+};
+
+class VulkanEngine
+{
 public:
+	bool _isInitialized{false};
+	int _frameNumber{0};
 
-	bool _isInitialized{ false };
-	int _frameNumber {0};
+	VkExtent2D _windowExtent{800, 600};
 
-	VkExtent2D _windowExtent{ 800 , 600 };
-
-	struct SDL_Window* _window{ nullptr };
+	struct SDL_Window *_window{nullptr};
 
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
@@ -34,7 +49,7 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	
+
 	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
@@ -44,7 +59,6 @@ public:
 	std::vector<VkFramebuffer> _framebuffers;
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
-
 
 	VkPipeline _trianglePipeline;
 
@@ -56,29 +70,27 @@ public:
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
 
-
 	VkPipeline _meshPipeline;
 	Mesh _triangleMesh;
 
 	Mesh _monkeyMesh;
 
-
 	void load_meshes();
 
-	void upload_mesh(Mesh& mesh);
+	void upload_mesh(Mesh &mesh);
 
 	void init();
 
-	//shuts down the engine
+	// shuts down the engine
 	void cleanup();
 
-	//draw loop
+	// draw loop
 	void draw();
 
-	//run main loop
+	// run main loop
 	void run();
 
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	bool load_shader_module(const char *filePath, VkShaderModule *outShaderModule);
 
 	void init_pipelines();
 
@@ -86,9 +98,25 @@ public:
 
 	VkPipelineLayout _meshPipelineLayout;
 
+	std::vector<RenderObject> _renderables;
+
+	std::unordered_map<std::string, Material> _materials;
+	std::unordered_map<std::string, Mesh> _meshes;
+	// functions
+
+	// create material and add it to the map
+	Material *create_material(VkPipeline pipeline, VkPipelineLayout layout, const std::string &name);
+
+	// returns nullptr if it can't be found
+	Material *get_material(const std::string &name);
+
+	// returns nullptr if it can't be found
+	Mesh *get_mesh(const std::string &name);
+
+	// our draw function
+	void draw_objects(VkCommandBuffer cmd, RenderObject *first, int count);
 
 private:
-
 	void init_vulkan();
 
 	void init_swapchain();
@@ -100,4 +128,6 @@ private:
 	void init_commands();
 
 	void init_sync_structures();
+
+	void init_scene();
 };
