@@ -146,8 +146,9 @@ void VulkanEngine::draw()
 	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
 	vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
-	vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer, &offset);
 
+
+	vkCmdBindVertexBuffers(cmd, 0, 1, &_monkeyMesh._vertexBuffer._buffer, &offset);
 	vkCmdDraw(cmd, _monkeyMesh._vertices.size(), 1, 0, 0);
 
 	vkCmdEndRenderPass(cmd);
