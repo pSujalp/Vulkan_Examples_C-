@@ -12,6 +12,10 @@
 #include <unordered_map>
 
 #include "RenderObject.h"
+#include "FrameData.h"
+
+
+constexpr unsigned int FRAME_OVERLAP = 2;
 
 class VulkanEngine
 {
@@ -61,6 +65,10 @@ public:
 	Mesh _triangleMesh;
 
 	Mesh _monkeyMesh;
+
+	FrameData _frames[FRAME_OVERLAP];
+
+    FrameData& get_current_frame();
 
 	void load_meshes();
 
