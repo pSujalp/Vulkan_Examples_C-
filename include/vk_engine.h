@@ -11,20 +11,7 @@
 
 #include <unordered_map>
 
-struct Material
-{
-	VkPipeline pipeline;
-	VkPipelineLayout pipelineLayout;
-};
-
-struct RenderObject
-{
-	Mesh *mesh;
-
-	Material *material;
-
-	glm::mat4 transformMatrix;
-};
+#include "RenderObject.h"
 
 class VulkanEngine
 {
