@@ -11,6 +11,11 @@
 
 
 
+
+struct GPUCameraData{
+	glm::mat4 mvp;
+};
+
 class VulkanEngine {
 public:
 
@@ -56,6 +61,9 @@ public:
 	VkPipeline _meshPipeline;
 	Mesh _triangleMesh;
 
+	AllocatedBuffer cameraBuffer;
+
+	
 
 	void load_meshes();
 
@@ -80,6 +88,13 @@ public:
 
 	VkPipelineLayout _meshPipelineLayout;
 
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
+	VkDescriptorSetLayout _CameraSetLayout;
+	VkDescriptorPool _descriptorPool;
+
+	VkDescriptorSet CameraDescriptor;
+
 
 private:
 
@@ -94,4 +109,6 @@ private:
 	void init_commands();
 
 	void init_sync_structures();
+
+	void init_descriptors();
 };
