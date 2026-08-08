@@ -515,6 +515,11 @@ void VulkanEngine::load_meshes()
 	_triangleMesh._vertices[1].color = glm::vec3{0.0f, 1.0f, 0.0f};
 	_triangleMesh._vertices[2].color = glm::vec3{0.0f, 0.0f, 1.0f};
 
+	_triangleMesh._vertices[0].uv = glm::vec2{1.0f, 1.0f};
+	_triangleMesh._vertices[1].uv = glm::vec2{0.0f, 1.0f};
+	_triangleMesh._vertices[2].uv = glm::vec2{0.5f, 0.0f};
+
+	
 	upload_mesh(_triangleMesh);
 }
 
