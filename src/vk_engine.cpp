@@ -120,7 +120,6 @@ void VulkanEngine::draw()
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
-	
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 0, 1, &CameraDescriptor, 0, nullptr);
 
 	VkDeviceSize offset = 0;
@@ -663,20 +662,15 @@ void VulkanEngine::init_descriptors()
 	VkWriteDescriptorSet setWrite = {};
 	setWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 	setWrite.pNext = nullptr;
-
 	setWrite.dstBinding = 0;
-
 	setWrite.dstSet = CameraDescriptor;
-
 	setWrite.descriptorCount = 1;
-
 	setWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 	setWrite.pBufferInfo = &binfo;
-
 	vkUpdateDescriptorSets(_device, 1, &setWrite, 0, nullptr);
 
-	_mainDeletionQueue.push_function([=]()
-									 {
+	
+	_mainDeletionQueue.push_function([=](){
 		vkDestroyDescriptorSetLayout(_device, _CameraSetLayout, nullptr);
 		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); });
 }
