@@ -71,8 +71,18 @@ public:
     FrameData _frames[FRAME_OVERLAP];
     FrameData& get_current_frame();
 
+	VkPhysicalDeviceProperties _gpuProperties;
+
 	
 
+	size_t pad_uniform_buffer_size(size_t originalSize);
+
+	VkDescriptorSetLayout GPUSetLayout;
+	VkDescriptorSet GPUDescriptor;
+	GPUSceneData1 GPUParameters;
+	AllocatedBuffer GPUParameterBuffer;
+
+	
 	void load_meshes();
 
 	void upload_mesh(Mesh& mesh);
