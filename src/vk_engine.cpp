@@ -127,6 +127,7 @@ void VulkanEngine::draw()
 	vmaUnmapMemory(_allocator, cameraBuffer._allocation);
 
 	GPUSceneData1 camData1{};
+	camData1.Color = glm::vec4(1.f, 0.f, 0.f, 1.f);
 
 	data = nullptr;
 	vmaMapMemory(_allocator, GPUParameterBuffer._allocation, &data);
