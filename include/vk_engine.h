@@ -9,25 +9,26 @@
 #include <vk_mesh.h>
 #include <glm/gtx/transform.hpp>
 #include "FrameData.h"
+#include "vk_textures.h"
 
-
-
-struct GPUCameraData{
+struct GPUCameraData
+{
 	glm::mat4 mvp;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
 
-
-class VulkanEngine {
+class VulkanEngine
+{
 public:
+	VulkanEngine() = default;
 
-	bool _isInitialized{ false };
-	int _frameNumber {0};
+	bool _isInitialized{false};
+	int _frameNumber{0};
 
-	VkExtent2D _windowExtent{ 800 , 600 };
+	VkExtent2D _windowExtent{800, 600};
 
-	struct SDL_Window* _window{ nullptr };
+	struct SDL_Window *_window{nullptr};
 
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
@@ -42,7 +43,7 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	
+
 	VkRenderPass _renderPass;
 
 	VkSurfaceKHR _surface;
@@ -53,27 +54,22 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
-
 	VkPipeline _trianglePipeline;
 
 	DeletionQueue _mainDeletionQueue;
 
 	VmaAllocator _allocator;
 
-
 	VkPipeline _meshPipeline;
 	Mesh _triangleMesh;
 
 	AllocatedBuffer cameraBuffer;
 
-
-//getter for the frame we are rendering to right now.
-    FrameData _frames[FRAME_OVERLAP];
-    FrameData& get_current_frame();
+	// getter for the frame we are rendering to right now.
+	FrameData _frames[FRAME_OVERLAP];
+	FrameData &get_current_frame();
 
 	VkPhysicalDeviceProperties _gpuProperties;
-
-	
 
 	size_t pad_uniform_buffer_size(size_t originalSize);
 
@@ -82,23 +78,22 @@ public:
 	GPUSceneData1 GPUParameters;
 	AllocatedBuffer GPUParameterBuffer;
 
-	
 	void load_meshes();
 
-	void upload_mesh(Mesh& mesh);
+	void upload_mesh(Mesh &mesh);
 
 	void init();
 
-	//shuts down the engine
+	// shuts down the engine
 	void cleanup();
 
-	//draw loop
+	// draw loop
 	void draw();
 
-	//run main loop
+	// run main loop
 	void run();
 
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	bool load_shader_module(const char *filePath, VkShaderModule *outShaderModule);
 
 	void init_pipelines();
 
@@ -113,9 +108,14 @@ public:
 
 	VkDescriptorSet CameraDescriptor;
 
+	VkDescriptorSetLayout _singleTextureSetLayout;
+	VkDescriptorSet _singleTextureDescriptor;
+	VkDescriptorSet TextureDescriptor = VK_NULL_HANDLE;
+	VkSampler _blockySampler;
+	AllocatedImage _texture;
+	VkImageView _textureImageView;
 
 private:
-
 	void init_vulkan();
 
 	void init_swapchain();

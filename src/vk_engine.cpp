@@ -5,6 +5,7 @@
 
 #include <vk_types.h>
 #include <vk_initializers.h>
+#include <vk_textures.h>
 
 #include "VkBootstrap.h"
 
@@ -97,10 +98,17 @@ void VulkanEngine::draw()
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
+	uint32_t frameIndex = _frameNumber % FRAME_OVERLAP;
+
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 0, 1, &CameraDescriptor, 0, nullptr);
 
-	uint32_t uniform_offset = 0;
+	uint32_t uniform_offset = (uint32_t)pad_uniform_buffer_size(sizeof(GPUSceneData1)) * frameIndex;
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 1, 1, &GPUDescriptor, 1, &uniform_offset);
+
+	if (TextureDescriptor != VK_NULL_HANDLE)
+	{
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 2, 1, &TextureDescriptor, 0, nullptr);
+	}
 
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer, &offset);
@@ -121,6 +129,8 @@ void VulkanEngine::draw()
 	GPUCameraData camData;
 	camData.mvp = mesh_matrix;
 
+	// Camera buffer: single-slot for now (see earlier note — for full FRAME_OVERLAP
+	// safety this should also be split per-frame like GPUParameterBuffer below).
 	void *data;
 	vmaMapMemory(_allocator, cameraBuffer._allocation, &data);
 	memcpy(data, &camData, sizeof(GPUCameraData));
@@ -129,9 +139,9 @@ void VulkanEngine::draw()
 	GPUSceneData1 camData1{};
 	camData1.Color = glm::vec4(1.f, 0.f, 0.f, 1.f);
 
-	data = nullptr;
-	vmaMapMemory(_allocator, GPUParameterBuffer._allocation, &data);
-	memcpy(data, &camData1, sizeof(GPUSceneData1));
+	char *scenePtr;
+	vmaMapMemory(_allocator, GPUParameterBuffer._allocation, (void **)&scenePtr);
+	memcpy(scenePtr + uniform_offset, &camData1, sizeof(GPUSceneData1));
 	vmaUnmapMemory(_allocator, GPUParameterBuffer._allocation);
 
 	vkCmdDraw(cmd, _triangleMesh._vertices.size(), 1, 0, 0);
@@ -473,12 +483,14 @@ void VulkanEngine::init_pipelines()
 
 	VkDescriptorSetLayout layouts[] = {
 		_CameraSetLayout,
-		GPUSetLayout};
+		GPUSetLayout,
+		_singleTextureSetLayout
+	};
 
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = {};
 	mesh_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	mesh_pipeline_layout_info.pNext = nullptr;
-	mesh_pipeline_layout_info.setLayoutCount = 2;
+	mesh_pipeline_layout_info.setLayoutCount = 3;
 	mesh_pipeline_layout_info.pSetLayouts = layouts;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
@@ -505,21 +517,32 @@ void VulkanEngine::init_pipelines()
 
 void VulkanEngine::load_meshes()
 {
-	_triangleMesh._vertices.resize(3);
+	_triangleMesh._vertices.resize(6);
 
-	_triangleMesh._vertices[0].position = glm::vec3{1.0f, 1.0f, 0.0f};
-	_triangleMesh._vertices[1].position = glm::vec3{-1.0f, 1.0f, 0.0f};
-	_triangleMesh._vertices[2].position = glm::vec3{0.0f, -1.0f, 0.0f};
+	_triangleMesh._vertices[0].position = glm::vec3{-0.5f,  -0.5f, 0.5f};
+	_triangleMesh._vertices[1].position = glm::vec3{-0.5f, 0.5f, 0.5f};
+	_triangleMesh._vertices[2].position = glm::vec3{0.5f, 0.5f, 0.5f};
+	_triangleMesh._vertices[3].position = glm::vec3{-0.5f,  -0.5f, 0.5f};
+	_triangleMesh._vertices[4].position = glm::vec3{0.5f, 0.5f, 0.5f};
+	_triangleMesh._vertices[5].position = glm::vec3{0.5f, -0.5f, 0.5f};
+
 
 	_triangleMesh._vertices[0].color = glm::vec3{1.0f, 0.0f, 0.0f};
 	_triangleMesh._vertices[1].color = glm::vec3{0.0f, 1.0f, 0.0f};
 	_triangleMesh._vertices[2].color = glm::vec3{0.0f, 0.0f, 1.0f};
+	_triangleMesh._vertices[3].color = glm::vec3{1.0f, 0.0f, 0.0f};
+	_triangleMesh._vertices[4].color = glm::vec3{0.0f, 0.0f, 1.0f};
+	_triangleMesh._vertices[5].color = glm::vec3{1.0f, 1.0f, 0.0f};
 
-	_triangleMesh._vertices[0].uv = glm::vec2{1.0f, 1.0f};
+
+	_triangleMesh._vertices[0].uv = glm::vec2{0.0f, 0.0f};
 	_triangleMesh._vertices[1].uv = glm::vec2{0.0f, 1.0f};
-	_triangleMesh._vertices[2].uv = glm::vec2{0.5f, 0.0f};
+	_triangleMesh._vertices[2].uv = glm::vec2{1.0f, 1.0f};
+	_triangleMesh._vertices[3].uv = glm::vec2{0.0f, 0.0f};
+	_triangleMesh._vertices[4].uv = glm::vec2{1.0f, 1.0f};
+	_triangleMesh._vertices[5].uv = glm::vec2{1.0f, 0.0f};
 
-	
+
 	upload_mesh(_triangleMesh);
 }
 
@@ -570,8 +593,20 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 void VulkanEngine::init_descriptors()
 {
-	const size_t sceneParamBufferSize = pad_uniform_buffer_size(sizeof(GPUSceneData1));
+	// --- Scene / camera uniform buffers ---
+	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData1));
 	GPUParameterBuffer = create_buffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+	VkDescriptorSetLayoutCreateInfo set3info = {};
+	set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	set3info.bindingCount = 1;
+	set3info.flags = 0;
+	set3info.pNext = nullptr;
+	set3info.pBindings = &textureBind;
+
+	VK_CHECK(vkCreateDescriptorSetLayout(_device, &set3info, nullptr, &_singleTextureSetLayout));
 
 	VkDescriptorSetLayoutBinding GPUBufferBinding = {};
 	GPUBufferBinding.binding = 1;
@@ -603,10 +638,13 @@ void VulkanEngine::init_descriptors()
 
 	VK_CHECK(vkCreateDescriptorSetLayout(_device, &camSetInfo, nullptr, &_CameraSetLayout));
 
+	// --- Pool: bumped maxSets to 10 -> keep room for camera/GPU/texture sets ---
 	std::vector<VkDescriptorPoolSize> sizes =
 		{
 			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10}};
+			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 10},
+			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 10}
+		};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -636,6 +674,59 @@ void VulkanEngine::init_descriptors()
 	gpuAllocInfo.pSetLayouts = &GPUSetLayout;
 
 	VK_CHECK(vkAllocateDescriptorSets(_device, &gpuAllocInfo, &GPUDescriptor));
+
+	// --- Texture: load image, sampler, and set 2 descriptor ---
+	// NOTE: TextureDescriptor, _blockySampler, and _texture (AllocatedImage) +
+	// _textureImageView (VkImageView) need to be added as members in vk_engine.h.
+	// Initialize TextureDescriptor = VK_NULL_HANDLE in the header so draw() can
+	// safely skip binding if loading fails.
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
+	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_blockySampler));
+
+	_mainDeletionQueue.push_function([=]()
+									 { vkDestroySampler(_device, _blockySampler, nullptr); });
+
+	bool texLoaded = vkutil::load_image_from_file(*this, "assets/texture.jpeg", _texture);
+
+	if (texLoaded)
+	{
+		VkImageViewCreateInfo imageInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, _texture.image, VK_IMAGE_ASPECT_COLOR_BIT);
+		VK_CHECK(vkCreateImageView(_device, &imageInfo, nullptr, &_textureImageView));
+
+		_mainDeletionQueue.push_function([=]()
+										 { vkDestroyImageView(_device, _textureImageView, nullptr); });
+
+		VkDescriptorSetAllocateInfo texAllocInfo = {};
+		texAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		texAllocInfo.pNext = nullptr;
+		texAllocInfo.descriptorPool = _descriptorPool;
+		texAllocInfo.descriptorSetCount = 1;
+		texAllocInfo.pSetLayouts = &_singleTextureSetLayout;
+
+		VK_CHECK(vkAllocateDescriptorSets(_device, &texAllocInfo, &TextureDescriptor));
+
+		VkDescriptorImageInfo imageBufferInfo = {};
+		imageBufferInfo.sampler = _blockySampler;
+		imageBufferInfo.imageView = _textureImageView;
+		imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+		VkWriteDescriptorSet texture1 = {};
+		texture1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		texture1.pNext = nullptr;
+		texture1.dstBinding = 0;
+		texture1.dstSet = TextureDescriptor;
+		texture1.descriptorCount = 1;
+		texture1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		texture1.pImageInfo = &imageBufferInfo;
+
+		vkUpdateDescriptorSets(_device, 1, &texture1, 0, nullptr);
+	}
+	else
+	{
+		std::cout << "Failed to load texture, set 2 will not be bound in draw()" << std::endl;
+		TextureDescriptor = VK_NULL_HANDLE;
+	}
 
 	VkDescriptorBufferInfo camBufferInfo = {};
 	camBufferInfo.buffer = cameraBuffer._buffer;
@@ -675,5 +766,6 @@ void VulkanEngine::init_descriptors()
 
 		vkDestroyDescriptorSetLayout(_device, GPUSetLayout, nullptr);
 		vkDestroyDescriptorSetLayout(_device, _CameraSetLayout, nullptr);
+		vkDestroyDescriptorSetLayout(_device, _singleTextureSetLayout, nullptr);
 		vkDestroyDescriptorPool(_device, _descriptorPool, nullptr); });
 }

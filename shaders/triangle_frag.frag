@@ -10,8 +10,12 @@ layout (location = 0) out vec4 outFragColor;
 layout (location = 2) in vec2 inUV;
 
 
+layout(set = 2, binding = 0) uniform sampler2D tex1;
+
+
 void main()
 {
 	
-	outFragColor = vec4(inUV.x, inUV.y, 0.5f, 1.0f);
+	const vec3 color = texture(tex1,inUV).xyz;
+	outFragColor = vec4(color,1.0f);
 }
