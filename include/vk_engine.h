@@ -8,13 +8,16 @@
 #include "PipelineBuilder.h"
 #include <vk_mesh.h>
 #include <glm/gtx/transform.hpp>
-
+#include "FrameData.h"
 
 
 
 struct GPUCameraData{
 	glm::mat4 mvp;
 };
+
+constexpr unsigned int FRAME_OVERLAP = 2;
+
 
 class VulkanEngine {
 public:
@@ -62,6 +65,11 @@ public:
 	Mesh _triangleMesh;
 
 	AllocatedBuffer cameraBuffer;
+
+
+//getter for the frame we are rendering to right now.
+    FrameData _frames[FRAME_OVERLAP];
+    FrameData& get_current_frame();
 
 	
 
