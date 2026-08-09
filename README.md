@@ -89,7 +89,7 @@ git clone https://github.com/microsoft/vcpkg.git
 
 cd vcpkg
 
-./bootstrap-vcpkg.bat.exe
+./bootstrap-vcpkg.bat
 ```
 
 Install the required libraries:
