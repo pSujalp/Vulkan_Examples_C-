@@ -89,14 +89,14 @@ git clone https://github.com/microsoft/vcpkg.git
 
 cd vcpkg
 
-bootstrap-vcpkg.bat
+./bootstrap-vcpkg.bat.exe
 ```
 
 Install the required libraries:
 
 ```powershell
-vcpkg install glfw3
-vcpkg install glm
+./vcpkg.exe install glfw3
+./vcpkg.exe install glm
 ```
 
 ---
