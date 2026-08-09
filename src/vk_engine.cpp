@@ -28,7 +28,6 @@ void VulkanEngine::init()
 		_windowExtent.width,
 		_windowExtent.height,
 		window_flags);
-
 	init_vulkan();
 
 	init_swapchain();
@@ -670,7 +669,7 @@ void VulkanEngine::init_descriptor()
 	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_blockySampler));
 
 
-	
+
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroySampler(_device, _blockySampler, nullptr);
 									    vkDestroyDescriptorSetLayout(_device, _mixsingleTextureSetLayout, nullptr); 
