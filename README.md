@@ -97,6 +97,7 @@ Install the required libraries:
 ```powershell
 ./vcpkg.exe install glfw3
 ./vcpkg.exe install glm
+./vcpkg.exe install sdl2:x64-windows
 ```
 
 ---
