@@ -11,6 +11,9 @@
 
 
 
+#include "vk_textures.h"
+
+
 class VulkanEngine {
 public:
 
@@ -79,6 +82,35 @@ public:
 	VkPipelineLayout _trianglePipelineLayout;
 
 	VkPipelineLayout _meshPipelineLayout;
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+
+	void init_descriptor();
+
+	VkDescriptorPool _descriptorPool;
+
+	VkDescriptorSetLayout _singleTextureSetLayout;
+	VkDescriptorSet TextureDescriptor = VK_NULL_HANDLE;
+	VkSampler _blockySampler;
+	AllocatedImage _texture;
+	VkImageView _textureImageView;
+	
+
+
+
+
+	VkDescriptorSetLayout _mixsingleTextureSetLayout;
+	VkDescriptorSet TextureDescriptor1 = VK_NULL_HANDLE;
+	AllocatedImage _texture1;
+	VkImageView _textureImageView1;
+
+
+
+
+
+
+
+
+
 
 
 private:

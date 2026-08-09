@@ -13,8 +13,10 @@ struct VertexInputDescription {
 
 struct Mesh {
 	std::vector<Vertex> _vertices;
-
 	AllocatedBuffer _vertexBuffer;
+
+	std::vector<uint32_t> _indices;
+	AllocatedBuffer _indexBuffer;
 
 	bool load_from_obj(const char* filename);
 };

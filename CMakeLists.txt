@@ -28,6 +28,7 @@ add_executable(${PROJECT_NAME}
     src/vk_pipelines.cpp
     src/PipelineBuilder.cpp
     src/vk_mesh.cpp
+    src/vk_textures.cpp
 )
 
 

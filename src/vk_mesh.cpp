@@ -12,7 +12,7 @@ VertexInputDescription Vertex::get_vertex_description()
 	mainBinding.stride = sizeof(Vertex);
 	mainBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-	description.bindings.push_back(mainBinding);
+	description.bindings.emplace_back(mainBinding);
 
 	//Position will be stored at Location 0
 	VkVertexInputAttributeDescription positionAttribute = {};
@@ -35,9 +35,18 @@ VertexInputDescription Vertex::get_vertex_description()
 	colorAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
 	colorAttribute.offset = offsetof(Vertex, color);
 
-	description.attributes.push_back(positionAttribute);
-	description.attributes.push_back(normalAttribute);
-	description.attributes.push_back(colorAttribute);
+
+	VkVertexInputAttributeDescription uvAttribute ={};
+	uvAttribute.binding = 0 ;
+	uvAttribute.location = 3;
+	uvAttribute.format = VK_FORMAT_R32G32B32_SFLOAT;
+	uvAttribute.offset = offsetof(Vertex, uv);
+
+
+	description.attributes.emplace_back(positionAttribute);
+	description.attributes.emplace_back(normalAttribute);
+	description.attributes.emplace_back(colorAttribute);
+	description.attributes.emplace_back(uvAttribute);
 	return description;
 }
 
@@ -105,7 +114,7 @@ bool Mesh::load_from_obj(const char* filename)
 				new_vert.color = new_vert.normal;
 
 
-				_vertices.push_back(new_vert);
+				_vertices.emplace_back(new_vert);
 			}
 			index_offset += fv;
 		}
