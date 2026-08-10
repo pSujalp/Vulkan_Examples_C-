@@ -46,6 +46,8 @@ void VulkanEngine::init()
 
 	load_meshes();
 
+	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
+
 	_isInitialized = true;
 }
 void VulkanEngine::cleanup()
@@ -131,14 +133,10 @@ void VulkanEngine::draw()
 
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer, &offset);
-
 	vkCmdBindIndexBuffer(cmd, _triangleMesh._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	glm::vec3 camPos = {0.f, 0.f, -2.f};
-
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+	glm::mat4 view = camera.GetViewMatrix();
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
 
 	glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
@@ -189,15 +187,79 @@ void VulkanEngine::run()
 	SDL_Event e;
 	bool bQuit = false;
 
+	Uint64 NOW = SDL_GetPerformanceCounter();
+	Uint64 LAST = 0;
+	double deltaTime = 0;
+	int mouseX, mouseY;
+	Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+
+	float lastX = mouseX;
+	float lastY = mouseY;
+
 	while (!bQuit)
 	{
+
+		LAST = NOW;
+		NOW = SDL_GetPerformanceCounter();
+		deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
 
 		while (SDL_PollEvent(&e) != 0)
 		{
 
-			if (e.type == SDL_QUIT)
+			switch (e.type)
+			{
+
+			case SDL_QUIT:
 				bQuit = true;
+				break;
+
+			case SDL_KEYUP:
+				switch (e.key.keysym.sym)
+				{
+
+				case SDLK_SPACE:
+					printf("Spacebar released.\n");
+					break;
+					break;
+				}
+			}
 		}
+		const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+		int mouseX, mouseY;
+		mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+		bool isLeftInterfaceClick = (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT));
+			if (camera.firstMouse){
+				lastX = mouseX;
+				lastY = mouseY;
+				camera.firstMouse = false;
+			}
+
+			if (keystate[SDL_SCANCODE_W])
+				camera.ProcessKeyboard(FORWARD, deltaTime);
+			if (keystate[SDL_SCANCODE_S])
+				camera.ProcessKeyboard(BACKWARD, deltaTime);
+			if (keystate[SDL_SCANCODE_A])
+				camera.ProcessKeyboard(LEFT, deltaTime);
+			if (keystate[SDL_SCANCODE_D])
+				camera.ProcessKeyboard(RIGHT, deltaTime);
+
+			
+			float xoffset = mouseX - lastX;
+			float yoffset = lastY - mouseY; 
+
+			lastX = mouseX;
+			lastY = mouseY;
+			if(isLeftInterfaceClick){
+				 camera.ProcessMouseMovement(xoffset,yoffset);
+				 
+				 SDL_ShowCursor(0);
+			}
+			else{
+				 SDL_ShowCursor(1);
+				 
+			}
+
+	
 
 		draw();
 	}
@@ -668,8 +730,6 @@ void VulkanEngine::init_descriptor()
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_blockySampler));
 
-
-
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroySampler(_device, _blockySampler, nullptr);
 									    vkDestroyDescriptorSetLayout(_device, _mixsingleTextureSetLayout, nullptr); 
@@ -684,8 +744,7 @@ void VulkanEngine::init_descriptor()
 		VK_CHECK(vkCreateImageView(_device, &imageInfo, nullptr, &_textureImageView));
 
 		_mainDeletionQueue.push_function([=]()
-										 { vkDestroyImageView(_device, _textureImageView, nullptr); }
-										);
+										 { vkDestroyImageView(_device, _textureImageView, nullptr); });
 
 		VkDescriptorSetAllocateInfo texAllocInfo = {};
 		texAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -738,12 +797,11 @@ void VulkanEngine::init_descriptor()
 		Writetexture1.descriptorCount = 1;
 		Writetexture1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		Writetexture1.pImageInfo = &imageBufferInfo1;
-
-		VkWriteDescriptorSet setWrites[] = {Writetexture0, Writetexture1};
-
-		vkUpdateDescriptorSets(_device, 2, setWrites, 0, nullptr);
+		std::vector<VkWriteDescriptorSet> wkWds;
+		wkWds.emplace_back(Writetexture0);
+		wkWds.emplace_back(Writetexture1);
+		vkUpdateDescriptorSets(_device, 2, wkWds.data(), 0, nullptr);
 	}
-
 	else
 	{
 		std::cout << "Failed to load texture, set 2 will not be bound in draw()" << std::endl;

@@ -8,6 +8,9 @@ int main(void)
 	
 	if (engine._isInitialized) {
 		engine.run();
+
+
+		
 	}	
 
 	engine.cleanup();	

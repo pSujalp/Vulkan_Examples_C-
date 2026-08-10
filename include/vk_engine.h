@@ -8,7 +8,7 @@
 #include "PipelineBuilder.h"
 #include <vk_mesh.h>
 #include <glm/gtx/transform.hpp>
-
+#include "camera.h"
 
 
 #include "vk_textures.h"
@@ -95,23 +95,13 @@ public:
 	VkImageView _textureImageView;
 	
 
-
-
-
 	VkDescriptorSetLayout _mixsingleTextureSetLayout;
 	VkDescriptorSet TextureDescriptor1 = VK_NULL_HANDLE;
 	AllocatedImage _texture1;
 	VkImageView _textureImageView1;
 
 
-
-
-
-
-
-
-
-
+	Camera camera;
 
 private:
 
