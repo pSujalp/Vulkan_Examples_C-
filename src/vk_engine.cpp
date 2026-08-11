@@ -202,6 +202,9 @@ void VulkanEngine::run()
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
+		
+		string str =  "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)1/deltaTime);
+        SDL_SetWindowTitle(_window, str.c_str());
 
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -213,13 +216,21 @@ void VulkanEngine::run()
 				bQuit = true;
 				break;
 
+			case SDL_MOUSEBUTTONUP:
+                if (e.button.button == SDL_BUTTON_LEFT) {
+                    
+                    printf("Left mouse button released at position: %d, %d\n", e.button.x, e.button.y);
+					SDL_WarpMouseInWindow(_window, _windowExtent.width/2, _windowExtent.height/2);
+					 SDL_ShowCursor(1);
+
+                }
+                break;
+
 			case SDL_KEYUP:
 				switch (e.key.keysym.sym)
 				{
-
 				case SDLK_SPACE:
 					printf("Spacebar released.\n");
-					break;
 					break;
 				}
 			}
@@ -232,8 +243,14 @@ void VulkanEngine::run()
 				lastX = mouseX;
 				lastY = mouseY;
 				camera.firstMouse = false;
-			}
-
+			}				
+			float xoffset = mouseX - lastX;
+			float yoffset = lastY - mouseY; 
+			lastX = mouseX;
+			lastY = mouseY;
+			if(isLeftInterfaceClick){
+				camera.ProcessMouseMovement(xoffset,yoffset);		 
+				SDL_ShowCursor(0);
 			if (keystate[SDL_SCANCODE_W])
 				camera.ProcessKeyboard(FORWARD, deltaTime);
 			if (keystate[SDL_SCANCODE_S])
@@ -242,24 +259,9 @@ void VulkanEngine::run()
 				camera.ProcessKeyboard(LEFT, deltaTime);
 			if (keystate[SDL_SCANCODE_D])
 				camera.ProcessKeyboard(RIGHT, deltaTime);
-
-			
-			float xoffset = mouseX - lastX;
-			float yoffset = lastY - mouseY; 
-
-			lastX = mouseX;
-			lastY = mouseY;
-			if(isLeftInterfaceClick){
-				 camera.ProcessMouseMovement(xoffset,yoffset);
-				 
-				 SDL_ShowCursor(0);
 			}
-			else{
-				 SDL_ShowCursor(1);
-				 
-			}
-
-	
+		
+		
 
 		draw();
 	}
