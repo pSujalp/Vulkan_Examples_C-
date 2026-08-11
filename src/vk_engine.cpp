@@ -28,6 +28,8 @@ void VulkanEngine::init()
 		_windowExtent.width,
 		_windowExtent.height,
 		window_flags);
+
+
 	init_vulkan();
 
 	init_swapchain();
@@ -119,14 +121,10 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	if (TextureDescriptor != VK_NULL_HANDLE)
-	{
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 0, 1, &TextureDescriptor, 0, nullptr);
-	}
 
-	if (TextureDescriptor1 != VK_NULL_HANDLE)
-	{
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, 1, 1, &TextureDescriptor1, 0, nullptr);
+
+	for(const auto &i: txs.TextureDescriptor_map){
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
@@ -559,8 +557,8 @@ void VulkanEngine::init_pipelines()
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = {};
 	mesh_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	mesh_pipeline_layout_info.pNext = nullptr;
-	mesh_pipeline_layout_info.setLayoutCount = 2;
-	mesh_pipeline_layout_info.pSetLayouts = layouts;
+	mesh_pipeline_layout_info.setLayoutCount = txs.vkVkDescriptorSet_array.size();
+	mesh_pipeline_layout_info.pSetLayouts = txs.vkVkDescriptorSet_array.data();
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 	VkPushConstantRange push_constant;
 	push_constant.offset = 0;
@@ -694,7 +692,6 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 void VulkanEngine::init_descriptor()
 {
-
 	std::vector<VkDescriptorPoolSize> sizes =
 		{
 			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
@@ -710,106 +707,15 @@ void VulkanEngine::init_descriptor()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-	VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
-
-	VkDescriptorSetLayoutCreateInfo set3info = {};
-	set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set3info.bindingCount = 1;
-	set3info.flags = 0;
-	set3info.pNext = nullptr;
-	set3info.pBindings = &textureBind;
-
-	vkCreateDescriptorSetLayout(_device, &set3info, nullptr, &_singleTextureSetLayout);
-
-	VkDescriptorSetLayoutBinding textureBind1 = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1);
-	VkDescriptorSetLayoutCreateInfo set4info = {};
-	set4info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-	set4info.bindingCount = 1;
-	set4info.flags = 0;
-	set4info.pNext = nullptr;
-	set4info.pBindings = &textureBind1;
-	vkCreateDescriptorSetLayout(_device, &set4info, nullptr, &_mixsingleTextureSetLayout);
-	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
-	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_blockySampler));
-
-	_mainDeletionQueue.push_function([=]()
-									 { vkDestroySampler(_device, _blockySampler, nullptr);
-									    vkDestroyDescriptorSetLayout(_device, _mixsingleTextureSetLayout, nullptr); 
-									 vkDestroyDescriptorSetLayout(_device, _singleTextureSetLayout, nullptr); });
 
 	bool texLoaded = vkutil::load_image_from_file(*this, "assets/container.jpg", _texture);
 	bool texLoaded1 = vkutil::load_image_from_file(*this, "assets/awesomeface.png", _texture1);
 
-	if (texLoaded && texLoaded1)
-	{
-		VkImageViewCreateInfo imageInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, _texture.image, VK_IMAGE_ASPECT_COLOR_BIT);
-		VK_CHECK(vkCreateImageView(_device, &imageInfo, nullptr, &_textureImageView));
+	txs = Texture_Slots(_device,_mainDeletionQueue,_descriptorPool);
 
-		_mainDeletionQueue.push_function([=]()
-										 { vkDestroyImageView(_device, _textureImageView, nullptr); });
 
-		VkDescriptorSetAllocateInfo texAllocInfo = {};
-		texAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		texAllocInfo.pNext = nullptr;
-		texAllocInfo.descriptorPool = _descriptorPool;
-		texAllocInfo.descriptorSetCount = 1;
-		texAllocInfo.pSetLayouts = &_singleTextureSetLayout;
+	txs.Add(_texture, 0, 0);
+	txs.Add(_texture1,  1, 1);
 
-		VK_CHECK(vkAllocateDescriptorSets(_device, &texAllocInfo, &TextureDescriptor));
 
-		VkDescriptorImageInfo imageBufferInfo = {};
-		imageBufferInfo.sampler = _blockySampler;
-		imageBufferInfo.imageView = _textureImageView;
-		imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		VkWriteDescriptorSet Writetexture0 = {};
-		Writetexture0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		Writetexture0.pNext = nullptr;
-		Writetexture0.dstBinding = 0;
-		Writetexture0.dstSet = TextureDescriptor;
-		Writetexture0.descriptorCount = 1;
-		Writetexture0.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		Writetexture0.pImageInfo = &imageBufferInfo;
-
-		imageInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, _texture1.image, VK_IMAGE_ASPECT_COLOR_BIT);
-		VK_CHECK(vkCreateImageView(_device, &imageInfo, nullptr, &_textureImageView1));
-
-		_mainDeletionQueue.push_function([=]()
-										 { vkDestroyImageView(_device, _textureImageView1, nullptr); });
-
-		VkDescriptorSetAllocateInfo texAllocInfo1 = {};
-		texAllocInfo1.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		texAllocInfo1.pNext = nullptr;
-		texAllocInfo1.descriptorPool = _descriptorPool;
-		texAllocInfo1.descriptorSetCount = 1;
-		texAllocInfo1.pSetLayouts = &_mixsingleTextureSetLayout;
-
-		VK_CHECK(vkAllocateDescriptorSets(_device, &texAllocInfo1, &TextureDescriptor1));
-
-		VkDescriptorImageInfo imageBufferInfo1 = {};
-		imageBufferInfo1.sampler = _blockySampler;
-		imageBufferInfo1.imageView = _textureImageView1;
-		imageBufferInfo1.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-		VkWriteDescriptorSet Writetexture1 = {};
-		Writetexture1.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		Writetexture1.pNext = nullptr;
-		Writetexture1.dstBinding = 1;
-		Writetexture1.dstSet = TextureDescriptor1;
-		Writetexture1.descriptorCount = 1;
-		Writetexture1.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		Writetexture1.pImageInfo = &imageBufferInfo1;
-		std::vector<VkWriteDescriptorSet> wkWds;
-		wkWds.emplace_back(Writetexture0);
-		wkWds.emplace_back(Writetexture1);
-		vkUpdateDescriptorSets(_device, 2, wkWds.data(), 0, nullptr);
-	}
-	else
-	{
-		std::cout << "Failed to load texture, set 2 will not be bound in draw()" << std::endl;
-		TextureDescriptor = VK_NULL_HANDLE;
-
-		std::cout << "Failed to load texture, set 2 will not be bound in draw()" << std::endl;
-		TextureDescriptor1 = VK_NULL_HANDLE;
-	}
 }

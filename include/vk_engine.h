@@ -12,6 +12,7 @@
 
 
 #include "vk_textures.h"
+#include "Texture_Slots.h"
 
 
 class VulkanEngine {
@@ -100,8 +101,9 @@ public:
 	AllocatedImage _texture1;
 	VkImageView _textureImageView1;
 
-
+	
 	Camera camera;
+	Texture_Slots txs;
 
 private:
 
