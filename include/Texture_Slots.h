@@ -12,9 +12,10 @@ public:
 	DeletionQueue dq;
 	VkDescriptorPool _descriptorPool;
 	std::vector<VkDescriptorSetLayout> vkVkDescriptorSet_array;
-
 	std::unordered_map<VkDescriptorSet, uint8_t> TextureDescriptor_map;
 
+
+	
 	Texture_Slots(VkDevice _device, DeletionQueue deletionQ, VkDescriptorPool dp) : vkdevice(_device), dq(deletionQ), _descriptorPool(dp) {}
 
 	Texture_Slots() {}

@@ -571,7 +571,6 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
 	_meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
-
 	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
@@ -714,3 +713,6 @@ void VulkanEngine::init_descriptor()
 	txs.Add(_texture, 0, 0);
 	txs.Add(_texture1,  1, 1);
 }
+
+
+
