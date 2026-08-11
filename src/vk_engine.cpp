@@ -707,15 +707,10 @@ void VulkanEngine::init_descriptor()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-
+	
 	bool texLoaded = vkutil::load_image_from_file(*this, "assets/container.jpg", _texture);
 	bool texLoaded1 = vkutil::load_image_from_file(*this, "assets/awesomeface.png", _texture1);
-
 	txs = Texture_Slots(_device,_mainDeletionQueue,_descriptorPool);
-
-
 	txs.Add(_texture, 0, 0);
 	txs.Add(_texture1,  1, 1);
-
-
 }
