@@ -30,7 +30,7 @@ add_executable(${PROJECT_NAME}
     src/vk_mesh.cpp
     src/vk_textures.cpp
     src/ufbx.cpp
-    src/FBX_Loader.cpp
+    src/FBX_Model_Loader.cpp
 )
 
 
@@ -76,6 +76,12 @@ if(APPLE)
 endif()
 
 
+find_library(SDL2_TTF_LIBRARY SDL2_ttf REQUIRED)
+
+if(SDL2_TTF_LIBRARY)
+    message(STATUS "Found SDL2_ttf: ${SDL2_TTF_LIBRARY}")
+endif()
+
 target_link_libraries(${PROJECT_NAME}
 PRIVATE
     Vulkan::Vulkan
@@ -87,7 +93,9 @@ PRIVATE
     imgui
     stb_image
     sdl2
-    
+
+
+    ${SDL2_TTF_LIBRARY}
 
     ${COCOA_FRAMEWORK}
     ${IOKIT_FRAMEWORK}

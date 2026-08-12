@@ -1,7 +1,7 @@
-#include "FBX_Loader.h"
+#include "FBX_Model_Loader.h"
 #include <cassert>
 
-FBX_Loader::FBX_Loader(const std::string &filepath)
+FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
 {
     scene = ufbx_load_file(filepath.c_str(), NULL, NULL);
     if (!scene)
