@@ -19,7 +19,14 @@ void VulkanEngine::init()
 
 	SDL_Init(SDL_INIT_VIDEO);
 
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
+	SDL_DisplayMode dm;
+if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
+    _windowExtent.height= dm.h;
+	_windowExtent.width = dm.w;
+  
+}
+    
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN ) ;
 
 	_window = SDL_CreateWindow(
 		"Vulkan Engine",
@@ -672,6 +679,9 @@ void VulkanEngine::load_meshes()
 	upload_mesh(_ModelMeshes);
 }
 
+
+
+
 void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 {
 
@@ -725,6 +735,10 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 	}
 }
 
+
+
+
+
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 {
 	VkBufferCreateInfo bufferInfo = {};
@@ -745,6 +759,8 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 	return newBuffer;
 }
+
+
 
 void VulkanEngine::init_descriptor()
 {

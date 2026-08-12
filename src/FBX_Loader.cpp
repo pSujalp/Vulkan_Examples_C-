@@ -63,15 +63,11 @@ FBX_Loader::FBX_Loader(std::string filepath)
             ufbx_vertex_stream streams[1] = {
                 {vertices.data(), vertices.size(), sizeof(Vertex)},
             };
-
             std::vector<uint32_t> indices;
             indices.resize(part.num_triangles * 3);
-
             size_t num_vertices = ufbx_generate_indices(
                 streams, 1, indices.data(), indices.size(), nullptr, nullptr);
-
             vertices.resize(num_vertices);
-
             Mesh meshy;
             meshy._vertices = std::move(vertices);
             meshy._indices = indices;
