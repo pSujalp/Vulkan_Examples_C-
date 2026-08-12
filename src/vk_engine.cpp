@@ -56,7 +56,15 @@ void VulkanEngine::init()
 
 	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
 
-	IMGUI_CHECKVERSION();
+	init_imgui();
+
+
+	_isInitialized = true;
+}
+
+
+void VulkanEngine::init_imgui(){
+		IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 
@@ -82,9 +90,9 @@ void VulkanEngine::init()
 
 	// 3. Upload fonts to GPU
 	ImGui_ImplVulkan_CreateFontsTexture();
-
-	_isInitialized = true;
 }
+
+
 void VulkanEngine::cleanup()
 {
 	if (_isInitialized)
