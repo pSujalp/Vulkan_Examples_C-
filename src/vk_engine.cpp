@@ -154,6 +154,8 @@ void VulkanEngine::draw()
 
 		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
 
+		model = glm::translate(model,glm::vec3(50,0,-40));
+
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
 
 		
@@ -674,7 +676,7 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	FBX_Loader fbxl = FBX_Loader("assets/steve.fbx");
+	FBX_Loader fbxl = FBX_Loader("assets/car_low.fbx");
 
 	for (const auto &i : fbxl.Meshes)
 	{
@@ -780,7 +782,7 @@ void VulkanEngine::init_descriptor()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-	bool texLoaded = vkutil::load_image_from_file(*this, "assets/steve.png", _texture);
+	bool texLoaded = vkutil::load_image_from_file(*this, "assets/car_low.png", _texture);
 
 	txs = Texture_Slots(_device, _mainDeletionQueue, _descriptorPool);
 	txs.Add(_texture, 0, 0);
