@@ -29,6 +29,8 @@ add_executable(${PROJECT_NAME}
     src/PipelineBuilder.cpp
     src/vk_mesh.cpp
     src/vk_textures.cpp
+    src/ufbx.cpp
+    src/FBX_Loader.cpp
 )
 
 
@@ -85,6 +87,7 @@ PRIVATE
     imgui
     stb_image
     sdl2
+    
 
     ${COCOA_FRAMEWORK}
     ${IOKIT_FRAMEWORK}
