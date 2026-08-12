@@ -152,7 +152,11 @@ void VulkanEngine::draw()
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
 		projection[1][1] *= -1;
 
-		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
+
+		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+
+		
 
 		glm::mat4 mesh_matrix = projection * view * model;
 
@@ -670,7 +674,7 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	FBX_Loader fbxl = FBX_Loader("assets/Bullet_45_ACP.fbx");
+	FBX_Loader fbxl = FBX_Loader("assets/steve.fbx");
 
 	for (const auto &i : fbxl.Meshes)
 	{
@@ -706,9 +710,7 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 
 		void *data;
 		vmaMapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation, &data);
-
 		memcpy(data, model_meshes[i]._vertices.data(), model_meshes[i]._vertices.size() * sizeof(Vertex));
-
 		vmaUnmapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation);
 
 		data = nullptr;
@@ -725,7 +727,6 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 								 &model_meshes[i]._indexBuffer._buffer,
 								 &model_meshes[i]._indexBuffer._allocation,
 								 nullptr));
-
 		vmaMapMemory(_allocator, model_meshes[i]._indexBuffer._allocation, &data);
 		memcpy(data, model_meshes[i]._indices.data(), model_meshes[i]._indices.size() * sizeof(uint32_t));
 		vmaUnmapMemory(_allocator, model_meshes[i]._indexBuffer._allocation);
@@ -779,7 +780,7 @@ void VulkanEngine::init_descriptor()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
-	bool texLoaded = vkutil::load_image_from_file(*this, "assets/bullet.png", _texture);
+	bool texLoaded = vkutil::load_image_from_file(*this, "assets/steve.png", _texture);
 
 	txs = Texture_Slots(_device, _mainDeletionQueue, _descriptorPool);
 	txs.Add(_texture, 0, 0);
