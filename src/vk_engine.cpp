@@ -20,13 +20,13 @@ void VulkanEngine::init()
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_DisplayMode dm;
-if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
-    _windowExtent.height= dm.h;
-	_windowExtent.width = dm.w;
-  
-}
-    
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN ) ;
+	if (SDL_GetCurrentDisplayMode(0, &dm) == 0)
+	{
+		_windowExtent.height = dm.h;
+		_windowExtent.width = dm.w;
+	}
+
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
 	_window = SDL_CreateWindow(
 		"Vulkan Engine",
@@ -55,6 +55,33 @@ if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
 	load_meshes();
 
 	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+
+	// 2. Setup Platform/Renderer backends
+	ImGui_ImplSDL2_InitForVulkan(_window);
+
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = _instance;
+	init_info.PhysicalDevice = _chosenGPU;
+	init_info.Device = _device;
+	init_info.QueueFamily = _graphicsQueueFamily;
+	init_info.Queue = _graphicsQueue;
+	init_info.PipelineCache = pipelineCache;
+	init_info.DescriptorPool = _descriptorPool; // Needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+	init_info.Subpass = 0;
+	init_info.MinImageCount = 2;
+	init_info.ImageCount = _swapchainImages.size();
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.Allocator = nullptr;
+	init_info.RenderPass = _renderPass;
+
+	ImGui_ImplVulkan_Init(&init_info);
+
+	// 3. Upload fonts to GPU
+	ImGui_ImplVulkan_CreateFontsTexture();
 
 	_isInitialized = true;
 }
@@ -93,6 +120,10 @@ void VulkanEngine::cleanup()
 		vkDestroyInstance(_instance, nullptr);
 
 		SDL_DestroyWindow(_window);
+
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
 	}
 }
 
@@ -127,7 +158,7 @@ void VulkanEngine::draw()
 
 	rpInfo.clearValueCount = 2;
 
-		VkClearValue clearValues[] = { clearValue, depthClear };
+	VkClearValue clearValues[] = {clearValue, depthClear};
 
 	rpInfo.pClearValues = &clearValues[0];
 
@@ -154,11 +185,9 @@ void VulkanEngine::draw()
 
 		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
 
-		model = glm::translate(model,glm::vec3(50,0,-40));
+		model = glm::translate(model, glm::vec3(50, 0, -40));
 
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-
-		
 
 		glm::mat4 mesh_matrix = projection * view * model;
 
@@ -169,6 +198,27 @@ void VulkanEngine::draw()
 
 		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(i._indices.size()), 1, 0, 0, 0);
 	}
+
+	// Start the Dear ImGui frame
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplSDL2_NewFrame();
+	ImGui::NewFrame();
+
+	// Design your UI panels here
+	ImGui::Begin("Performance Diagnostics");
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	if (ImGui::Button("Reset Metrics"))
+	{
+	}
+	ImGui::End();
+
+	// Render into draw data strings
+	ImGui::Render();
+	ImDrawData *draw_data = ImGui::GetDrawData();
+
+	// Record ImGui primitives into your existing command buffer
+	// Call this between vkCmdBeginRenderPass and vkCmdEndRenderPass
+	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
 	vkCmdEndRenderPass(cmd);
 
@@ -228,6 +278,8 @@ void VulkanEngine::run()
 
 		while (SDL_PollEvent(&e) != 0)
 		{
+
+			ImGui_ImplSDL2_ProcessEvent(&e);
 
 			switch (e.type)
 			{
@@ -452,13 +504,15 @@ void VulkanEngine::init_default_renderpass()
 }
 void VulkanEngine::init_framebuffers()
 {
-	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
+	// create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
 
 	const uint32_t swapchain_imagecount = _swapchainImages.size();
+
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
-	for (int i = 0; i < swapchain_imagecount; i++) {
+	for (int i = 0; i < swapchain_imagecount; i++)
+	{
 
 		VkImageView attachments[2];
 		attachments[0] = _swapchainImageViews[i];
@@ -468,10 +522,10 @@ void VulkanEngine::init_framebuffers()
 		fb_info.attachmentCount = 2;
 		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
-		_mainDeletionQueue.push_function([=]() {
+		_mainDeletionQueue.push_function([=]()
+										 {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		});
+			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr); });
 	}
 }
 
@@ -617,6 +671,13 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._shaderStages.clear();
 
+	VkPipelineCacheCreateInfo cacheCreateInfo = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+		.initialDataSize = 0,
+		.pInitialData = nullptr};
+
+	vkCreatePipelineCache(_device, &cacheCreateInfo, NULL, &pipelineCache);
+
 	VkShaderModule meshVertShader;
 	if (!load_shader_module("shaders/tri_mesh.vert.spv", &meshVertShader))
 	{
@@ -632,7 +693,7 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-	
+
 	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	VkDescriptorSetLayout layouts[] = {
@@ -651,8 +712,6 @@ void VulkanEngine::init_pipelines()
 	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
-
-	
 
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
 
@@ -684,9 +743,6 @@ void VulkanEngine::load_meshes()
 	}
 	upload_mesh(_ModelMeshes);
 }
-
-
-
 
 void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 {
@@ -738,10 +794,6 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 	}
 }
 
-
-
-
-
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 {
 	VkBufferCreateInfo bufferInfo = {};
@@ -762,8 +814,6 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 	return newBuffer;
 }
-
-
 
 void VulkanEngine::init_descriptor()
 {
