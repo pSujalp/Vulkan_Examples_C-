@@ -206,7 +206,7 @@ https://brew.sh
 ## 3. Install Dependencies
 
 ```bash
-brew install glfw glm glslang
+brew install glfw glm glslang sdl2 sdl2_ttf
 ```
 
 ---
