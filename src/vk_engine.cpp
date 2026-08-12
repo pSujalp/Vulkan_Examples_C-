@@ -676,7 +676,7 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	FBX_Loader fbxl = FBX_Loader("assets/car_low.fbx");
+	FBX_Model_Loader fbxl = FBX_Model_Loader("assets/car_low.fbx");
 
 	for (const auto &i : fbxl.Meshes)
 	{

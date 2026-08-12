@@ -14,7 +14,7 @@
 #include "vk_textures.h"
 #include "Texture_Slots.h"
 #include "ufbx.h"
-#include "FBX_Loader.h"
+#include "FBX_Model_Loader.h"
 
 
 class VulkanEngine {
