@@ -1,7 +1,7 @@
 #include "FBX_Loader.h"
 #include <cassert>
 
-FBX_Loader::FBX_Loader(std::string filepath)
+FBX_Loader::FBX_Loader(const std::string &filepath)
 {
     scene = ufbx_load_file(filepath.c_str(), NULL, NULL);
     if (!scene)
@@ -57,7 +57,6 @@ FBX_Loader::FBX_Loader(std::string filepath)
                     vertices.push_back(v);
                 }
             }
-
             assert(vertices.size() == part.num_triangles * 3);
 
             ufbx_vertex_stream streams[1] = {

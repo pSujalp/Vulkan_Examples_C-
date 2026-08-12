@@ -12,10 +12,11 @@
 
 class FBX_Loader
 {
-
 public:
     std::vector<std::pair<Mesh, std::vector<uint32_t>>> Meshes;
     ufbx_scene *scene;
     FBX_Loader() {}
-    FBX_Loader(std::string filepath);
+    FBX_Loader(const std::string &filepath);
+
+
 };
