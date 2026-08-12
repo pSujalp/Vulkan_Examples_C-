@@ -2,7 +2,7 @@
 
 A cross-platform Vulkan renderer built with **CMake** supporting **Windows**, **Linux**, and **macOS**.
 
-Note- initially it's developed and texted on macOS and there could be some issues in windows and linux
+**NOTE** ⚠️ - initially it's developed and tested on macOS and there could be some issues in windows and linux
 
 ## Features
 
