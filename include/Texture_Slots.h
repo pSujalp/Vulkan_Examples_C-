@@ -19,7 +19,8 @@ public:
 	Texture_Slots(VkDevice _device, DeletionQueue deletionQ, VkDescriptorPool dp) : vkdevice(_device), dq(deletionQ), _descriptorPool(dp) {}
 
 	Texture_Slots() {}
-	void Add(AllocatedImage _texture, int setnumber, int bind = 0)
+	
+	void Add(const AllocatedImage &_texture, const int &setnumber, const int &bind = 0)
 	{
 
 		VkDescriptorSetLayout _TextureSetLayout = VK_NULL_HANDLE;
