@@ -17,6 +17,13 @@
 #include "FBX_Model_Loader.h"
 
 
+#include "imgui.h"
+#include "imgui_impl_sdl.h"
+#include "imgui_impl_vulkan.h"
+#include <stdio.h>
+#include <SDL.h>
+
+
 class VulkanEngine {
 public:
 
