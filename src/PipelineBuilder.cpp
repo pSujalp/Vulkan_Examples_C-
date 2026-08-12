@@ -37,6 +37,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass pass)
     pipelineInfo.pMultisampleState = &_multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.layout = _pipelineLayout;
+    pipelineInfo.pDepthStencilState = &_depthStencil;
     pipelineInfo.renderPass = pass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;

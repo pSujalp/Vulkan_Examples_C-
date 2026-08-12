@@ -109,6 +109,11 @@ public:
 	Camera camera;
 	Texture_Slots txs;
 
+    VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+	VkFormat _depthFormat;
+
+	
 private:
 
 	void init_vulkan();
