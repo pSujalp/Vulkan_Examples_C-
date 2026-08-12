@@ -13,6 +13,8 @@
 
 #include "vk_textures.h"
 #include "Texture_Slots.h"
+#include "ufbx.h"
+#include "FBX_Loader.h"
 
 
 class VulkanEngine {
@@ -58,12 +60,14 @@ public:
 
 
 	VkPipeline _meshPipeline;
-	Mesh _triangleMesh;
+
+
+	std::vector<Mesh> _ModelMeshes;
 
 
 	void load_meshes();
 
-	void upload_mesh(Mesh& mesh);
+	void upload_mesh(std::vector<Mesh>& mesh);
 
 	void init();
 

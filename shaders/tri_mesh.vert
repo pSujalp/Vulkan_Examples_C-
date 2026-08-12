@@ -1,13 +1,12 @@
 #version 450
 layout (location = 0) in vec3 vPosition;
 layout (location = 1) in vec3 vNormal;
-layout (location = 2) in vec3 vColor;
 layout (location = 3) in vec2 vUV;
 
 
 
 
-layout (location = 1) out vec3 outColor;
+
 layout (location = 2) out vec2 outUV;
 
 //push constants block
@@ -20,6 +19,6 @@ layout( push_constant ) uniform constants
 void main()
 {
 	gl_Position = PushConstants.render_matrix * vec4(vPosition, 1.0f);
-	outColor = vColor;
+	
 	outUV = vUV;
 }

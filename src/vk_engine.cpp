@@ -29,7 +29,6 @@ void VulkanEngine::init()
 		_windowExtent.height,
 		window_flags);
 
-
 	init_vulkan();
 
 	init_swapchain();
@@ -121,32 +120,36 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-
-
-	for(const auto &i: txs.TextureDescriptor_map){
+	for (const auto &i : txs.TextureDescriptor_map)
+	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
 	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer, &offset);
-	vkCmdBindIndexBuffer(cmd, _triangleMesh._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	glm::mat4 view = camera.GetViewMatrix();
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
-	projection[1][1] *= -1;
+	for (const auto &i : _ModelMeshes)
+	{
 
-	glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
+		vkCmdBindVertexBuffers(cmd, 0, 1, &i._vertexBuffer._buffer, &offset);
+		vkCmdBindIndexBuffer(cmd, i._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
-	glm::mat4 mesh_matrix = projection * view * model;
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
+		projection[1][1] *= -1;
 
-	MeshPushConstants constants;
-	constants.render_matrix = mesh_matrix;
+		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
 
-	vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+		glm::mat4 mesh_matrix = projection * view * model;
 
-	vkCmdDrawIndexed(cmd, static_cast<uint32_t>(_triangleMesh._indices.size()), 1, 0, 0, 0);
+		MeshPushConstants constants;
+		constants.render_matrix = mesh_matrix;
+
+		vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
+
+		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(i._indices.size()), 1, 0, 0, 0);
+	}
 
 	vkCmdEndRenderPass(cmd);
 
@@ -200,9 +203,9 @@ void VulkanEngine::run()
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
-		
-		string str =  "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)1/deltaTime);
-        SDL_SetWindowTitle(_window, str.c_str());
+
+		string str = "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)1 / deltaTime);
+		SDL_SetWindowTitle(_window, str.c_str());
 
 		while (SDL_PollEvent(&e) != 0)
 		{
@@ -215,14 +218,14 @@ void VulkanEngine::run()
 				break;
 
 			case SDL_MOUSEBUTTONUP:
-                if (e.button.button == SDL_BUTTON_LEFT) {
-                    
-                    printf("Left mouse button released at position: %d, %d\n", e.button.x, e.button.y);
-					SDL_WarpMouseInWindow(_window, _windowExtent.width/2, _windowExtent.height/2);
-					 SDL_ShowCursor(1);
+				if (e.button.button == SDL_BUTTON_LEFT)
+				{
 
-                }
-                break;
+					printf("Left mouse button released at position: %d, %d\n", e.button.x, e.button.y);
+					SDL_WarpMouseInWindow(_window, _windowExtent.width / 2, _windowExtent.height / 2);
+					SDL_ShowCursor(1);
+				}
+				break;
 
 			case SDL_KEYUP:
 				switch (e.key.keysym.sym)
@@ -237,18 +240,20 @@ void VulkanEngine::run()
 		int mouseX, mouseY;
 		mouseState = SDL_GetMouseState(&mouseX, &mouseY);
 		bool isLeftInterfaceClick = (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT));
-			if (camera.firstMouse){
-				lastX = mouseX;
-				lastY = mouseY;
-				camera.firstMouse = false;
-			}				
-			float xoffset = mouseX - lastX;
-			float yoffset = lastY - mouseY; 
+		if (camera.firstMouse)
+		{
 			lastX = mouseX;
 			lastY = mouseY;
-			if(isLeftInterfaceClick){
-				camera.ProcessMouseMovement(xoffset,yoffset);		 
-				SDL_ShowCursor(0);
+			camera.firstMouse = false;
+		}
+		float xoffset = mouseX - lastX;
+		float yoffset = lastY - mouseY;
+		lastX = mouseX;
+		lastY = mouseY;
+		if (isLeftInterfaceClick)
+		{
+			camera.ProcessMouseMovement(xoffset, yoffset);
+			SDL_ShowCursor(0);
 			if (keystate[SDL_SCANCODE_W])
 				camera.ProcessKeyboard(FORWARD, deltaTime);
 			if (keystate[SDL_SCANCODE_S])
@@ -257,9 +262,7 @@ void VulkanEngine::run()
 				camera.ProcessKeyboard(LEFT, deltaTime);
 			if (keystate[SDL_SCANCODE_D])
 				camera.ProcessKeyboard(RIGHT, deltaTime);
-			}
-		
-		
+		}
 
 		draw();
 	}
@@ -589,83 +592,66 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	_triangleMesh._vertices.resize(4);
+	FBX_Loader fbxl = FBX_Loader("assets/Bullet_45_ACP.fbx");
 
-	_triangleMesh._vertices[0].position = glm::vec3{0.5f, 0.5f, 0.0f};
-	_triangleMesh._vertices[1].position = glm::vec3{0.5f, -0.5f, 0.0f};
-	_triangleMesh._vertices[2].position = glm::vec3{-0.5f, -0.5f, 0.0f};
-	_triangleMesh._vertices[3].position = glm::vec3{-0.5f, 0.5f, 0.0f};
-
-	_triangleMesh._vertices[0].color = glm::vec3{1.0f, 0.0f, 0.0f};
-	_triangleMesh._vertices[1].color = glm::vec3{0.0f, 1.0f, 0.0f};
-	_triangleMesh._vertices[2].color = glm::vec3{0.0f, 0.0f, 1.0f};
-	_triangleMesh._vertices[3].color = glm::vec3{1.0f, 1.0f, 0.0f};
-
-	_triangleMesh._vertices[0].uv = glm::vec2{1.0f, 1.0f};
-	_triangleMesh._vertices[1].uv = glm::vec2{1.0f, 0.0f};
-	_triangleMesh._vertices[2].uv = glm::vec2{0.0f, 0.0f};
-	_triangleMesh._vertices[3].uv = glm::vec2{0.0f, 1.0f};
-
-	_triangleMesh._indices.resize(6);
-	_triangleMesh._indices[0] = 0;
-	_triangleMesh._indices[1] = 1;
-	_triangleMesh._indices[2] = 3;
-	_triangleMesh._indices[3] = 1;
-	_triangleMesh._indices[4] = 2;
-	_triangleMesh._indices[5] = 3;
-
-	upload_mesh(_triangleMesh);
+	for (const auto &i : fbxl.Meshes)
+	{
+		_ModelMeshes.emplace_back(i.first);
+	}
+	upload_mesh(_ModelMeshes);
 }
 
-void VulkanEngine::upload_mesh(Mesh &mesh)
+void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 {
 
-	VkBufferCreateInfo bufferInfo = {};
-	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	for (size_t i{0}; i < model_meshes.size(); i++)
+	{
 
-	bufferInfo.size = mesh._vertices.size() * sizeof(Vertex);
+		VkBufferCreateInfo bufferInfo = {};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = model_meshes[i]._vertices.size() * sizeof(Vertex);
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		VmaAllocationCreateInfo vmaallocInfo = {};
+		vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+						&model_meshes[i]._vertexBuffer._buffer,
+						&model_meshes[i]._vertexBuffer._allocation,
+						nullptr);
+		_mainDeletionQueue.push_function([=]()
+										 { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
+		_mainDeletionQueue.push_function([=]()
+										 { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
 
-	VmaAllocationCreateInfo vmaallocInfo = {};
-	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		void *data;
+		vmaMapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation, &data);
 
-	vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
-					&mesh._vertexBuffer._buffer,
-					&mesh._vertexBuffer._allocation,
-					nullptr);
+		memcpy(data, model_meshes[i]._vertices.data(), model_meshes[i]._vertices.size() * sizeof(Vertex));
 
-	_mainDeletionQueue.push_function([=]()
-									 { vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation); });
+		vmaUnmapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation);
 
-	void *data;
-	vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
+		data = nullptr;
 
-	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+		VkBufferCreateInfo indexBufferInfo = {};
+		indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		indexBufferInfo.size = model_meshes[i]._indices.size() * sizeof(uint32_t);
+		indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-	vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+		VmaAllocationCreateInfo indexAllocInfo = {};
+		indexAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-	data = nullptr;
+		VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &indexAllocInfo,
+								 &model_meshes[i]._indexBuffer._buffer,
+								 &model_meshes[i]._indexBuffer._allocation,
+								 nullptr));
 
-	VkBufferCreateInfo indexBufferInfo = {};
-	indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	indexBufferInfo.size = mesh._indices.size() * sizeof(uint32_t);
-	indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		vmaMapMemory(_allocator, model_meshes[i]._indexBuffer._allocation, &data);
+		memcpy(data, model_meshes[i]._indices.data(), model_meshes[i]._indices.size() * sizeof(uint32_t));
+		vmaUnmapMemory(_allocator, model_meshes[i]._indexBuffer._allocation);
 
-	VmaAllocationCreateInfo indexAllocInfo = {};
-	indexAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-	VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &indexAllocInfo,
-							 &mesh._indexBuffer._buffer,
-							 &mesh._indexBuffer._allocation,
-							 nullptr));
-
-	vmaMapMemory(_allocator, mesh._indexBuffer._allocation, &data);
-	memcpy(data, mesh._indices.data(), mesh._indices.size() * sizeof(uint32_t));
-	vmaUnmapMemory(_allocator, mesh._indexBuffer._allocation);
-
-	_mainDeletionQueue.push_function([=]()
-									 { vmaDestroyBuffer(_allocator, mesh._indexBuffer._buffer, mesh._indexBuffer._allocation); });
+		_mainDeletionQueue.push_function([=]()
+										 { vmaDestroyBuffer(_allocator, model_meshes[i]._indexBuffer._buffer, model_meshes[i]._indexBuffer._allocation); });
+	}
 }
 
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
@@ -706,13 +692,9 @@ void VulkanEngine::init_descriptor()
 
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
+	bool texLoaded = vkutil::load_image_from_file(*this, "assets/bullet.png", _texture);
 	
-	bool texLoaded = vkutil::load_image_from_file(*this, "assets/container.jpg", _texture);
-	bool texLoaded1 = vkutil::load_image_from_file(*this, "assets/awesomeface.png", _texture1);
-	txs = Texture_Slots(_device,_mainDeletionQueue,_descriptorPool);
+	txs = Texture_Slots(_device, _mainDeletionQueue, _descriptorPool);
 	txs.Add(_texture, 0, 0);
-	txs.Add(_texture1,  1, 1);
+	
 }
-
-
-
