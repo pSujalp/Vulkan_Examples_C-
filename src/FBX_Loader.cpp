@@ -1,4 +1,5 @@
 #include "FBX_Loader.h"
+#include <cassert>
 
 FBX_Loader::FBX_Loader(std::string filepath)
 {
@@ -9,9 +10,12 @@ FBX_Loader::FBX_Loader(std::string filepath)
         return;
     }
 
+    std::vector<uint32_t> tri_indices;
+
     for (ufbx_mesh *mesh : scene->meshes)
     {
-        std::vector<uint32_t> tri_indices;
+        printf("mesh '%s'\n", mesh->name.data);
+
         tri_indices.resize(mesh->max_face_triangles * 3);
 
         for (ufbx_mesh_part &part : mesh->material_parts)
@@ -24,8 +28,8 @@ FBX_Loader::FBX_Loader(std::string filepath)
             printf(". [%u] material: %s\n", part.index,
                    material ? material->name.data : "(none)");
 
-            // One mesh per material part, built up across all its faces.
-            Mesh meshy;
+            std::vector<Vertex> vertices;
+            vertices.reserve(part.num_triangles * 3);
 
             for (uint32_t face_index : part.face_indices)
             {
@@ -33,32 +37,46 @@ FBX_Loader::FBX_Loader(std::string filepath)
                 uint32_t num_tris = ufbx_triangulate_face(
                     tri_indices.data(), tri_indices.size(), mesh, face);
 
-                size_t base = meshy._vertices.size();
-                meshy._vertices.resize(base + num_tris * 3);
-                meshy._indices.resize(base + num_tris * 3);
-
                 for (size_t i = 0; i < num_tris * 3; i++)
                 {
                     uint32_t index = tri_indices[i];
 
-                    meshy._vertices[base + i].position = glm::vec3{
+                    Vertex v{};
+                    v.position = glm::vec3{
                         mesh->vertex_position[index].x,
                         mesh->vertex_position[index].y,
                         mesh->vertex_position[index].z};
-
-                    meshy._vertices[base + i].normal = glm::vec3{
+                    v.normal = glm::vec3{
                         mesh->vertex_normal[index].x,
                         mesh->vertex_normal[index].y,
                         mesh->vertex_normal[index].z};
-
-                    meshy._vertices[base + i].uv = glm::vec2{
+                    v.uv = glm::vec2{
                         mesh->vertex_uv[index].x,
                         mesh->vertex_uv[index].y};
 
-                    meshy._indices[base + i] = static_cast<uint32_t>(base + i);
+                    vertices.push_back(v);
                 }
             }
-            Meshes.push_back({meshy, tri_indices});
+
+            assert(vertices.size() == part.num_triangles * 3);
+
+            ufbx_vertex_stream streams[1] = {
+                {vertices.data(), vertices.size(), sizeof(Vertex)},
+            };
+
+            std::vector<uint32_t> indices;
+            indices.resize(part.num_triangles * 3);
+
+            size_t num_vertices = ufbx_generate_indices(
+                streams, 1, indices.data(), indices.size(), nullptr, nullptr);
+
+            vertices.resize(num_vertices);
+
+            Mesh meshy;
+            meshy._vertices = std::move(vertices);
+            meshy._indices = indices;
+
+            Meshes.push_back({meshy, indices});
         }
     }
 }
