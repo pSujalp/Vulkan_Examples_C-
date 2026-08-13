@@ -5,6 +5,7 @@
 #include <string>
 #include <stdio.h>
 #include <assert.h>
+#include "vk_types.h"
 
 
 
@@ -17,6 +18,8 @@ public:
     ufbx_scene *scene;
     FBX_Model_Loader() {}
     FBX_Model_Loader(const std::string &filepath);
+    void upload_mesh(std::vector<Mesh>&model_meshes,VmaAllocator _allocator,DeletionQueue _mainDeletionQueue);
+    
 
 
 };

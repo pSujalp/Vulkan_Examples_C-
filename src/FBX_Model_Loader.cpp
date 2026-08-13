@@ -75,3 +75,56 @@ FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
         }
     }
 }
+
+
+
+
+void FBX_Model_Loader::upload_mesh(std::vector<Mesh>& model_meshes, VmaAllocator _allocator,DeletionQueue _mainDeletionQueue)
+{
+
+    for (size_t i{0}; i < model_meshes.size(); i++)
+    {
+
+        VkBufferCreateInfo bufferInfo = {};
+        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size = model_meshes[i]._vertices.size() * sizeof(Vertex);
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        VmaAllocationCreateInfo vmaallocInfo = {};
+        vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+                        &model_meshes[i]._vertexBuffer._buffer,
+                        &model_meshes[i]._vertexBuffer._allocation,
+                        nullptr);
+        _mainDeletionQueue.push_function([=]()
+                                         { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
+        _mainDeletionQueue.push_function([=]()
+                                         { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
+
+        void *data;
+        vmaMapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation, &data);
+        memcpy(data, model_meshes[i]._vertices.data(), model_meshes[i]._vertices.size() * sizeof(Vertex));
+        vmaUnmapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation);
+
+        data = nullptr;
+
+        VkBufferCreateInfo indexBufferInfo = {};
+        indexBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        indexBufferInfo.size = model_meshes[i]._indices.size() * sizeof(uint32_t);
+        indexBufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo indexAllocInfo = {};
+        indexAllocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+        VK_CHECK(vmaCreateBuffer(_allocator, &indexBufferInfo, &indexAllocInfo,
+                                 &model_meshes[i]._indexBuffer._buffer,
+                                 &model_meshes[i]._indexBuffer._allocation,
+                                 nullptr));
+        vmaMapMemory(_allocator, model_meshes[i]._indexBuffer._allocation, &data);
+        memcpy(data, model_meshes[i]._indices.data(), model_meshes[i]._indices.size() * sizeof(uint32_t));
+        vmaUnmapMemory(_allocator, model_meshes[i]._indexBuffer._allocation);
+
+        _mainDeletionQueue.push_function([=]()
+                                         { vmaDestroyBuffer(_allocator, model_meshes[i]._indexBuffer._buffer, model_meshes[i]._indexBuffer._allocation); });
+    }
+}
