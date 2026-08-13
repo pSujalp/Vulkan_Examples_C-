@@ -207,17 +207,26 @@ void VulkanEngine::draw()
 		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(i._indices.size()), 1, 0, 0, 0);
 	}
 
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration 
+                              | ImGuiWindowFlags_AlwaysAutoResize 
+                              | ImGuiWindowFlags_NoSavedSettings 
+                              | ImGuiWindowFlags_NoFocusOnAppearing 
+                              | ImGuiWindowFlags_NoNav 
+                              | ImGuiWindowFlags_NoMove;
+
 	// Start the Dear ImGui frame
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
+	ImGui::SetNextWindowBgAlpha(0.0f);
 
 	// Design your UI panels here
-	ImGui::Begin("Performance Diagnostics");
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-	if (ImGui::Button("Reset Metrics"))
-	{
-	}
+	ImGui::Begin("Performance Diagnostics",nullptr,window_flags);
+	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+
+	ImGui::Text("Left-Click to use Freecam  ");
+	ImGui::Text("WASD for movement and Mouse for rotation");
+	
 	ImGui::End();
 
 	// Render into draw data strings
@@ -287,7 +296,7 @@ void VulkanEngine::run()
 		while (SDL_PollEvent(&e) != 0)
 		{
 
-			ImGui_ImplSDL2_ProcessEvent(&e);
+			
 
 			switch (e.type)
 			{
@@ -342,8 +351,8 @@ void VulkanEngine::run()
 			if (keystate[SDL_SCANCODE_D])
 				camera.ProcessKeyboard(RIGHT, deltaTime);
 		}
-
 		draw();
+		ImGui_ImplSDL2_ProcessEvent(&e);
 	}
 }
 
