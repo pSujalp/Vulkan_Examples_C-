@@ -121,6 +121,12 @@ public:
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
 
+
+	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+
+
+	VkSampleCountFlagBits getMaxUsableSampleCount();
+
 	
 private:
 

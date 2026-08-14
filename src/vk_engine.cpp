@@ -82,7 +82,7 @@ void VulkanEngine::init_imgui(){
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2;
 	init_info.ImageCount = _swapchainImages.size();
-	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.MSAASamples = msaaSamples;
 	init_info.Allocator = nullptr;
 	init_info.RenderPass = _renderPass;
 
@@ -90,6 +90,24 @@ void VulkanEngine::init_imgui(){
 
 	// 3. Upload fonts to GPU
 	ImGui_ImplVulkan_CreateFontsTexture();
+}
+
+
+VkSampleCountFlagBits VulkanEngine::getMaxUsableSampleCount() {
+    VkPhysicalDeviceProperties physicalDeviceProperties;
+    vkGetPhysicalDeviceProperties(_chosenGPU, &physicalDeviceProperties);
+
+    VkSampleCountFlags counts = physicalDeviceProperties.limits.framebufferColorSampleCounts & physicalDeviceProperties.limits.framebufferDepthSampleCounts;
+    if (counts & VK_SAMPLE_COUNT_64_BIT) { return VK_SAMPLE_COUNT_64_BIT; std::cout<<"count 64";}
+    if (counts & VK_SAMPLE_COUNT_32_BIT) { return VK_SAMPLE_COUNT_32_BIT; std::cout<<"count 32";}
+    if (counts & VK_SAMPLE_COUNT_16_BIT) { return VK_SAMPLE_COUNT_16_BIT; std::cout<<"count 16";}
+    if (counts & VK_SAMPLE_COUNT_8_BIT) { return VK_SAMPLE_COUNT_8_BIT; std::cout<<"count 8";}
+    if (counts & VK_SAMPLE_COUNT_4_BIT) { return VK_SAMPLE_COUNT_4_BIT; std::cout<<"count 4";}
+    if (counts & VK_SAMPLE_COUNT_2_BIT) { return VK_SAMPLE_COUNT_2_BIT; std::cout<<"count 2"; }
+
+
+
+    return VK_SAMPLE_COUNT_1_BIT;
 }
 
 
@@ -384,6 +402,14 @@ void VulkanEngine::init_vulkan()
 	_device = vkbDevice.device;
 	_chosenGPU = physicalDevice.physical_device;
 
+	msaaSamples = getMaxUsableSampleCount();
+
+
+	std::cout<< "--------------------------"<<std::endl;
+	std::cout<< msaaSamples<<std::endl;
+	std::cout<< "--------------------------"<<std::endl;
+
+
 	_graphicsQueue = vkbDevice.get_queue(vkb::QueueType::graphics).value();
 
 	_graphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
@@ -420,7 +446,7 @@ void VulkanEngine::init_swapchain()
 
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent,msaaSamples);
 
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -445,7 +471,7 @@ void VulkanEngine::init_default_renderpass()
 
 	VkAttachmentDescription color_attachment = {};
 	color_attachment.format = _swachainImageFormat;
-	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.samples = msaaSamples;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -461,7 +487,7 @@ void VulkanEngine::init_default_renderpass()
 
 	depth_attachment.flags = 0;
 	depth_attachment.format = _depthFormat;
-	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.samples = msaaSamples;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -664,7 +690,7 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 
-	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
+	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info(msaaSamples);
 
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 
