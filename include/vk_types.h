@@ -146,6 +146,8 @@ struct Node : public IRenderable {
 struct MeshPushConstants {
 	glm::vec4 data;
 	glm::mat4 render_matrix;
+    glm::vec3 lightPos;
+    glm::vec3 camPos;
 };
 
 

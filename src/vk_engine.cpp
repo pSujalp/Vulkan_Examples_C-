@@ -196,6 +196,9 @@ void VulkanEngine::draw()
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 	VkDeviceSize offset = 0;
 
+
+	glm::vec3 lighPos = glm::vec3(light[0],light[1],light[2]);
+
 	for (const auto &i : _ModelMeshes)
 	{
 
@@ -212,10 +215,14 @@ void VulkanEngine::draw()
 
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 
+		model = glm::rotate(model,glm::radians(270.f),glm::vec3(1,0,0));
+
 		glm::mat4 mesh_matrix = projection * view * model;
 
 		MeshPushConstants constants;
 		constants.render_matrix = mesh_matrix;
+		constants.camPos = camera.Position;
+		constants.lightPos = lighPos;
 
 		vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
 
@@ -241,6 +248,8 @@ void VulkanEngine::draw()
 
 	ImGui::Text("Left-Click to use Freecam  ");
 	ImGui::Text("WASD for movement and Mouse for rotation");
+
+	ImGui::SliderFloat3("Light Position",light,-1000,1000,"%.3f",NULL);
 	
 	ImGui::End();
 

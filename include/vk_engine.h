@@ -135,6 +135,8 @@ public:
 
 	VkSampleCountFlagBits getMaxUsableSampleCount();
 
+	float light[3] = {};
+
 	
 private:
 
