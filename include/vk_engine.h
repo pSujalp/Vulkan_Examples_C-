@@ -117,9 +117,16 @@ public:
 	Camera camera;
 	Texture_Slots txs;
 
+
+
+	AllocatedImage _colorImage;
+	VkImageView _colorImageView;
+
     VkImageView _depthImageView;
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
+
+	
 
 
 	VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;

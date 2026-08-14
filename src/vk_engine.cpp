@@ -68,7 +68,7 @@ void VulkanEngine::init_imgui(){
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 
-	// 2. Setup Platform/Renderer backends
+	
 	ImGui_ImplSDL2_InitForVulkan(_window);
 
 	ImGui_ImplVulkan_InitInfo init_info = {};
@@ -78,7 +78,7 @@ void VulkanEngine::init_imgui(){
 	init_info.QueueFamily = _graphicsQueueFamily;
 	init_info.Queue = _graphicsQueue;
 	init_info.PipelineCache = pipelineCache;
-	init_info.DescriptorPool = _descriptorPool; // Needs VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+	init_info.DescriptorPool = _descriptorPool; 
 	init_info.Subpass = 0;
 	init_info.MinImageCount = 2;
 	init_info.ImageCount = _swapchainImages.size();
@@ -88,7 +88,7 @@ void VulkanEngine::init_imgui(){
 
 	ImGui_ImplVulkan_Init(&init_info);
 
-	// 3. Upload fonts to GPU
+	
 	ImGui_ImplVulkan_CreateFontsTexture();
 }
 
@@ -208,7 +208,7 @@ void VulkanEngine::draw()
 
 		glm::mat4 model = glm::mat4{1.0f};
 
-		// model = glm::translate(model, glm::vec3(50, 0, -40));
+		
 
 		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 
@@ -229,13 +229,13 @@ void VulkanEngine::draw()
                               | ImGuiWindowFlags_NoNav 
                               | ImGuiWindowFlags_NoMove;
 
-	// Start the Dear ImGui frame
+	
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplSDL2_NewFrame();
 	ImGui::NewFrame();
 	ImGui::SetNextWindowBgAlpha(0.0f);
 
-	// Design your UI panels here
+	
 	ImGui::Begin("Performance Diagnostics",nullptr,window_flags);
 	ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
 
@@ -244,12 +244,12 @@ void VulkanEngine::draw()
 	
 	ImGui::End();
 
-	// Render into draw data strings
+	
 	ImGui::Render();
 	ImDrawData *draw_data = ImGui::GetDrawData();
 
-	// Record ImGui primitives into your existing command buffer
-	// Call this between vkCmdBeginRenderPass and vkCmdEndRenderPass
+	
+	
 	ImGui_ImplVulkan_RenderDrawData(draw_data, cmd);
 
 	vkCmdEndRenderPass(cmd);
@@ -427,7 +427,6 @@ void VulkanEngine::init_swapchain()
 
 	vkb::Swapchain vkbSwapchain = swapchainBuilder
 									  .use_default_format_selection()
-
 									  .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
 									  .set_desired_extent(_windowExtent.width, _windowExtent.height)
 									  .build()
@@ -439,14 +438,15 @@ void VulkanEngine::init_swapchain()
 
 	_swachainImageFormat = vkbSwapchain.image_format;
 
-	VkExtent3D depthImageExtent = {
+	VkExtent3D imageExtent = {
 		_windowExtent.width,
 		_windowExtent.height,
 		1};
 
+	
 	_depthFormat = VK_FORMAT_D32_SFLOAT;
 
-	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent,msaaSamples);
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, imageExtent, msaaSamples);
 
 	VmaAllocationCreateInfo dimg_allocinfo = {};
 	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -458,33 +458,50 @@ void VulkanEngine::init_swapchain()
 
 	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
 
+	
+	VkImageCreateInfo cimg_info = vkinit::image_create_info(_swachainImageFormat, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, imageExtent, msaaSamples);
+
+	VmaAllocationCreateInfo cimg_allocinfo = {};
+	cimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	cimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(_allocator, &cimg_info, &cimg_allocinfo, &_colorImage.image, &_colorImage.allocation, nullptr);
+
+	VkImageViewCreateInfo cview_info = vkinit::imageview_create_info(_swachainImageFormat, _colorImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &cview_info, nullptr, &_colorImageView));
+
 	_mainDeletionQueue.push_function([=]()
 									 {
 		vkDestroyImageView(_device, _depthImageView, nullptr);
-		vmaDestroyImage(_allocator, _depthImage.image, _depthImage.allocation); });
+		vmaDestroyImage(_allocator, _depthImage.image, _depthImage.allocation);
+
+		vkDestroyImageView(_device, _colorImageView, nullptr);
+		vmaDestroyImage(_allocator, _colorImage.image, _colorImage.allocation); });
 
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroySwapchainKHR(_device, _swapchain, nullptr); });
 }
+
 void VulkanEngine::init_default_renderpass()
 {
-
+	
 	VkAttachmentDescription color_attachment = {};
 	color_attachment.format = _swachainImageFormat;
 	color_attachment.samples = msaaSamples;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE; 
 	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkAttachmentReference color_attachment_ref = {};
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+	
 	VkAttachmentDescription depth_attachment = {};
-
 	depth_attachment.flags = 0;
 	depth_attachment.format = _depthFormat;
 	depth_attachment.samples = msaaSamples;
@@ -499,11 +516,27 @@ void VulkanEngine::init_default_renderpass()
 	depth_attachment_ref.attachment = 1;
 	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+	
+	VkAttachmentDescription resolve_attachment = {};
+	resolve_attachment.format = _swachainImageFormat;
+	resolve_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	resolve_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	resolve_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	resolve_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	resolve_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	resolve_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	resolve_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference resolve_attachment_ref = {};
+	resolve_attachment_ref.attachment = 2;
+	resolve_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
 	subpass.pDepthStencilAttachment = &depth_attachment_ref;
+	subpass.pResolveAttachments = &resolve_attachment_ref; 
 
 	VkSubpassDependency dependency = {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -522,16 +555,14 @@ void VulkanEngine::init_default_renderpass()
 	depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 	VkSubpassDependency dependencies[2] = {dependency, depth_dependency};
-
-	VkAttachmentDescription attachments[2] = {color_attachment, depth_attachment};
+	VkAttachmentDescription attachments[3] = {color_attachment, depth_attachment, resolve_attachment};
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.attachmentCount = 2;
+	render_pass_info.attachmentCount = 3;
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-
 	render_pass_info.dependencyCount = 2;
 	render_pass_info.pDependencies = &dependencies[0];
 
@@ -539,11 +570,9 @@ void VulkanEngine::init_default_renderpass()
 
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroyRenderPass(_device, _renderPass, nullptr); });
-
 }
 void VulkanEngine::init_framebuffers()
 {
-	// create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
 	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
 
 	const uint32_t swapchain_imagecount = _swapchainImages.size();
@@ -552,13 +581,13 @@ void VulkanEngine::init_framebuffers()
 
 	for (int i = 0; i < swapchain_imagecount; i++)
 	{
-
-		VkImageView attachments[2];
-		attachments[0] = _swapchainImageViews[i];
-		attachments[1] = _depthImageView;
+		VkImageView attachments[3];
+		attachments[0] = _colorImageView;      
+		attachments[1] = _depthImageView;      
+		attachments[2] = _swapchainImageViews[i]; 
 
 		fb_info.pAttachments = attachments;
-		fb_info.attachmentCount = 2;
+		fb_info.attachmentCount = 3;
 		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
 		_mainDeletionQueue.push_function([=]()
