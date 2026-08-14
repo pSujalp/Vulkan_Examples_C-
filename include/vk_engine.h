@@ -122,8 +122,9 @@ public:
 	AllocatedImage _colorImage;
 	VkImageView _colorImageView;
 
-    VkImageView _depthImageView;
+    
 	AllocatedImage _depthImage;
+	VkImageView _depthImageView;
 	VkFormat _depthFormat;
 
 	

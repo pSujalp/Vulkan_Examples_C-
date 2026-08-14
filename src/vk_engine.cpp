@@ -455,7 +455,6 @@ void VulkanEngine::init_swapchain()
 	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage.image, &_depthImage.allocation, nullptr);
 
 	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
-
 	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
 
 	
@@ -464,7 +463,6 @@ void VulkanEngine::init_swapchain()
 	VmaAllocationCreateInfo cimg_allocinfo = {};
 	cimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	cimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
 	vmaCreateImage(_allocator, &cimg_info, &cimg_allocinfo, &_colorImage.image, &_colorImage.allocation, nullptr);
 
 	VkImageViewCreateInfo cview_info = vkinit::imageview_create_info(_swachainImageFormat, _colorImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
