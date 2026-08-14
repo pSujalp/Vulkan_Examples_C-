@@ -1,19 +1,16 @@
 #include "FBX_Model_Loader.h"
 #include <cassert>
 
-FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
-{
+FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath){
     scene = ufbx_load_file(filepath.c_str(), NULL, NULL);
-    if (!scene)
-    {
+    if (!scene){
         printf("Failed to load FBX file: %s\n", filepath.c_str());
         return;
     }
 
     std::vector<uint32_t> tri_indices;
 
-    for (ufbx_mesh *mesh : scene->meshes)
-    {
+    for (ufbx_mesh *mesh : scene->meshes){
         printf("mesh '%s'\n", mesh->name.data);
 
         tri_indices.resize(mesh->max_face_triangles * 3);
@@ -31,8 +28,7 @@ FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
             std::vector<Vertex> vertices;
             vertices.reserve(part.num_triangles * 3);
 
-            for (uint32_t face_index : part.face_indices)
-            {
+            for (uint32_t face_index : part.face_indices){
                 ufbx_face face = mesh->faces[face_index];
                 uint32_t num_tris = ufbx_triangulate_face(
                     tri_indices.data(), tri_indices.size(), mesh, face);
@@ -75,16 +71,10 @@ FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
         }
     }
 }
-
-
-
-
-void FBX_Model_Loader::upload_mesh(std::vector<Mesh>& model_meshes, VmaAllocator _allocator,DeletionQueue _mainDeletionQueue)
-{
+void FBX_Model_Loader::upload_mesh(std::vector<Mesh>& model_meshes, VmaAllocator _allocator,DeletionQueue _mainDeletionQueue){
 
     for (size_t i{0}; i < model_meshes.size(); i++)
     {
-
         VkBufferCreateInfo bufferInfo = {};
         bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         bufferInfo.size = model_meshes[i]._vertices.size() * sizeof(Vertex);
@@ -100,7 +90,6 @@ void FBX_Model_Loader::upload_mesh(std::vector<Mesh>& model_meshes, VmaAllocator
                                          { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
         _mainDeletionQueue.push_function([=]()
                                          { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
-
         void *data;
         vmaMapMemory(_allocator, model_meshes[i]._vertexBuffer._allocation, &data);
         memcpy(data, model_meshes[i]._vertices.data(), model_meshes[i]._vertices.size() * sizeof(Vertex));

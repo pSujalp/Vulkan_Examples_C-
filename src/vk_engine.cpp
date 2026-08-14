@@ -172,13 +172,10 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	for (const auto &i : txs.TextureDescriptor_map)
-	{
+	for (const auto &i : txs.TextureDescriptor_map){
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
-
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-
 	VkDeviceSize offset = 0;
 
 	for (const auto &i : _ModelMeshes)
@@ -191,11 +188,11 @@ void VulkanEngine::draw()
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
 		projection[1][1] *= -1;
 
-		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
+		glm::mat4 model = glm::mat4{1.0f};
 
-		model = glm::translate(model, glm::vec3(50, 0, -40));
+		// model = glm::translate(model, glm::vec3(50, 0, -40));
 
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
 
 		glm::mat4 mesh_matrix = projection * view * model;
 
@@ -480,7 +477,6 @@ void VulkanEngine::init_default_renderpass()
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
-
 	subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
 	VkSubpassDependency dependency = {};
@@ -505,7 +501,6 @@ void VulkanEngine::init_default_renderpass()
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-
 	render_pass_info.attachmentCount = 2;
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
@@ -518,6 +513,7 @@ void VulkanEngine::init_default_renderpass()
 
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroyRenderPass(_device, _renderPass, nullptr); });
+
 }
 void VulkanEngine::init_framebuffers()
 {
@@ -754,8 +750,7 @@ void VulkanEngine::load_meshes()
 
 	FBX_Model_Loader fbxl = FBX_Model_Loader("assets/car_low.fbx");
 
-	for (const auto &i : fbxl.Meshes)
-	{
+	for (const auto &i : fbxl.Meshes){
 		_ModelMeshes.emplace_back(i.first);
 	}
 	fbxl.upload_mesh(_ModelMeshes,_allocator,_mainDeletionQueue);

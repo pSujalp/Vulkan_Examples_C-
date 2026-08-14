@@ -14,23 +14,16 @@ public:
 	std::vector<VkDescriptorSetLayout> vkVkDescriptorSet_array;
 	std::unordered_map<VkDescriptorSet, uint8_t> TextureDescriptor_map;
 
-
-	
 	Texture_Slots(VkDevice _device, DeletionQueue deletionQ, VkDescriptorPool dp) : vkdevice(_device), dq(deletionQ), _descriptorPool(dp) {}
 
 	Texture_Slots() {}
 	
-	void Add(const AllocatedImage &_texture, const int &setnumber, const int &bind = 0)
-	{
-
+	void Add(const AllocatedImage &_texture, const int &setnumber, const int &bind = 0){
 		VkDescriptorSetLayout _TextureSetLayout = VK_NULL_HANDLE;
-		;
 		VkSampler _TextureSampler = VK_NULL_HANDLE;
 		VkImageView _textureImageView = VK_NULL_HANDLE;
 		VkDescriptorSet TextureDescriptor = VK_NULL_HANDLE;
-
 		VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, bind);
-
 		VkDescriptorSetLayoutCreateInfo set3info = {};
 		set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		set3info.bindingCount = 1;
@@ -44,8 +37,7 @@ public:
 		VK_CHECK(vkCreateSampler(vkdevice, &samplerInfo, nullptr, &_TextureSampler));
 
 		dq.push_function([=]()
-						 { vkDestroySampler(vkdevice, _TextureSampler, nullptr);
-	   vkDestroyDescriptorSetLayout(vkdevice, _TextureSetLayout, nullptr); });
+						 { vkDestroySampler(vkdevice, _TextureSampler, nullptr);vkDestroyDescriptorSetLayout(vkdevice, _TextureSetLayout, nullptr); });
 
 		VkImageViewCreateInfo imageInfo = vkinit::imageview_create_info(VK_FORMAT_R8G8B8A8_SRGB, _texture.image, VK_IMAGE_ASPECT_COLOR_BIT);
 		VK_CHECK(vkCreateImageView(vkdevice, &imageInfo, nullptr, &_textureImageView));
@@ -68,7 +60,6 @@ public:
 		imageBufferInfo.sampler = _TextureSampler;
 		imageBufferInfo.imageView = _textureImageView;
 		imageBufferInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
 		VkWriteDescriptorSet Writetexture0 = {};
 		Writetexture0.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		Writetexture0.pNext = nullptr;
