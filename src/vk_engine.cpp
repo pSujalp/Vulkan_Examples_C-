@@ -595,8 +595,9 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
 	pipelineBuilder._shaderStages.clear();
-
 	VkShaderModule meshVertShader;
+
+	
 	if (!load_shader_module("shaders/tri_mesh.vert.spv", &meshVertShader))
 	{
 		std::cout << "Error when building the triangle vertex shader module" << std::endl;

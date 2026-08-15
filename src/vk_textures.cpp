@@ -22,11 +22,8 @@ bool vkutil::load_image_from_file(VulkanEngine &engine, const char *file, Alloca
 
 	void *pixel_ptr = pixels;
 	VkDeviceSize imageSize = texWidth * texHeight * 4;
-
 	VkFormat image_format = VK_FORMAT_R8G8B8A8_SRGB;
-
 	AllocatedBuffer stagingBuffer = engine.create_buffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-
 	void *data;
 	vmaMapMemory(engine._allocator, stagingBuffer._allocation, &data);
 	memcpy(data, pixel_ptr, static_cast<size_t>(imageSize));
@@ -243,11 +240,8 @@ bool vkutil::load_cubemap_from_files(VulkanEngine &engine, const std::array<std:
 	VkFenceCreateInfo fenceInfo = vkinit::fence_create_info();
 	VkFence uploadFence;
 	VK_CHECK(vkCreateFence(engine._device, &fenceInfo, nullptr, &uploadFence));
-
 	VK_CHECK(vkQueueSubmit(engine._graphicsQueue, 1, &submit, uploadFence));
-
 	vkWaitForFences(engine._device, 1, &uploadFence, true, 9999999999);
-
 	vkDestroyFence(engine._device, uploadFence, nullptr);
 	vkDestroyCommandPool(engine._device, uploadPool, nullptr);
 
