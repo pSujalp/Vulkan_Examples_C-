@@ -135,6 +135,7 @@ bool vkutil::load_cubemap_from_files(VulkanEngine &engine, const std::array<std:
 	{
 		int w, h;
 		facePixels[i] = stbi_load(files[i].c_str(), &w, &h, &texChannels, STBI_rgb_alpha);
+		std::cout << files[i] << " -> " << w << "x" << h << std::endl;
 		if (!facePixels[i])
 		{
 			std::cout << "Failed to load cubemap face: " << files[i] << std::endl;
