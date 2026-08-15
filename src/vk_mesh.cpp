@@ -42,9 +42,9 @@ VertexInputDescription Vertex::get_vertex_description()
 	uvAttribute.offset = offsetof(Vertex, uv);
 
 	description.attributes.push_back(positionAttribute);
-	description.attributes.push_back(normalAttribute);
-	description.attributes.push_back(colorAttribute);
-	description.attributes.push_back(uvAttribute);
+	// description.attributes.push_back(normalAttribute);
+	// description.attributes.push_back(colorAttribute);
+	// description.attributes.push_back(uvAttribute);
 	return description;
 }
 

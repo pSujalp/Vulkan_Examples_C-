@@ -10,6 +10,8 @@
 #include <glm/gtx/transform.hpp>
 #include "FrameData.h"
 #include "vk_textures.h"
+#include "camera.h"
+
 
 struct GPUCameraData
 {
@@ -114,6 +116,15 @@ public:
 	VkSampler _blockySampler;
 	AllocatedImage _texture;
 	VkImageView _textureImageView;
+
+
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+	VkFormat _depthFormat;
+
+	Camera camera;
+
+	
 
 private:
 	void init_vulkan();

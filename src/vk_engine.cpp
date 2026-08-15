@@ -43,6 +43,8 @@ void VulkanEngine::init()
 	init_pipelines();
 	load_meshes();
 
+	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
+
 	_isInitialized = true;
 }
 
@@ -87,12 +89,18 @@ void VulkanEngine::draw()
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
+
+	VkClearValue depthClear;
 	VkClearValue clearValue;
+	depthClear.depthStencil.depth = 1.f;
 	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
+	VkClearValue clearValues[] = { clearValue, depthClear };
+	
+
 	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
-	rpInfo.clearValueCount = 1;
-	rpInfo.pClearValues = &clearValue;
+	rpInfo.clearValueCount = 2;
+	rpInfo.pClearValues = &clearValues[0];
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -114,12 +122,12 @@ void VulkanEngine::draw()
 	vkCmdBindVertexBuffers(cmd, 0, 1, &_triangleMesh._vertexBuffer._buffer, &offset);
 
 	glm::vec3 camPos = {0.f, 0.f, -2.f};
-	glm::mat4 view = glm::translate(glm::mat4(1.f), camPos);
-	glm::mat4 projection = glm::perspective(glm::radians(70.f), 1700.f / 900.f, 0.1f, 200.0f);
+	glm::mat4 view = camera.GetViewMatrix();;
+	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
 	projection[1][1] *= -1;
+	glm::mat4 mesh_matrix = projection * glm::mat4(glm::mat3(view)) ;
 
-	glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(_frameNumber * 0.4f), glm::vec3(0, 1, 0));
-	glm::mat4 mesh_matrix = projection * view * model;
+
 
 	MeshPushConstants constants;
 	constants.render_matrix = mesh_matrix;
@@ -129,8 +137,8 @@ void VulkanEngine::draw()
 	GPUCameraData camData;
 	camData.mvp = mesh_matrix;
 
-	// Camera buffer: single-slot for now (see earlier note — for full FRAME_OVERLAP
-	// safety this should also be split per-frame like GPUParameterBuffer below).
+	
+	
 	void *data;
 	vmaMapMemory(_allocator, cameraBuffer._allocation, &data);
 	memcpy(data, &camData, sizeof(GPUCameraData));
@@ -183,12 +191,82 @@ void VulkanEngine::run()
 	SDL_Event e;
 	bool bQuit = false;
 
+	Uint64 NOW = SDL_GetPerformanceCounter();
+	Uint64 LAST = 0;
+	double deltaTime = 0;
+	int mouseX, mouseY;
+	Uint32 mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+
+	float lastX = mouseX;
+	float lastY = mouseY;
+
+
 	while (!bQuit)
 	{
+		LAST = NOW;
+		NOW = SDL_GetPerformanceCounter();
+		deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
+
+		string str = "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)1 / deltaTime);
+		SDL_SetWindowTitle(_window, str.c_str());
+
+
 		while (SDL_PollEvent(&e) != 0)
 		{
 			if (e.type == SDL_QUIT)
 				bQuit = true;
+			switch (e.type)
+			{
+
+			case SDL_QUIT:
+				bQuit = true;
+				break;
+
+			case SDL_MOUSEBUTTONUP:
+				if (e.button.button == SDL_BUTTON_LEFT)
+				{
+
+					printf("Left mouse button released at position: %d, %d\n", e.button.x, e.button.y);
+					SDL_WarpMouseInWindow(_window, _windowExtent.width / 2, _windowExtent.height / 2);
+					SDL_ShowCursor(1);
+				}
+				break;
+
+			case SDL_KEYUP:
+				switch (e.key.keysym.sym)
+				{
+				case SDLK_SPACE:
+					printf("Spacebar released.\n");
+					break;
+				}
+			}
+		}
+				const Uint8 *keystate = SDL_GetKeyboardState(nullptr);
+		int mouseX, mouseY;
+		mouseState = SDL_GetMouseState(&mouseX, &mouseY);
+		bool isLeftInterfaceClick = (mouseState & SDL_BUTTON(SDL_BUTTON_LEFT));
+		if (camera.firstMouse)
+		{
+			lastX = mouseX;
+			lastY = mouseY;
+			camera.firstMouse = false;
+		}
+		float xoffset = mouseX - lastX;
+		float yoffset = lastY - mouseY;
+		lastX = mouseX;
+		lastY = mouseY;
+		if (isLeftInterfaceClick)
+		{
+			camera.ProcessMouseMovement(xoffset, yoffset);
+			SDL_ShowCursor(0);
+			if (keystate[SDL_SCANCODE_W])
+				camera.ProcessKeyboard(FORWARD, deltaTime);
+			if (keystate[SDL_SCANCODE_S])
+				camera.ProcessKeyboard(BACKWARD, deltaTime);
+			if (keystate[SDL_SCANCODE_A])
+				camera.ProcessKeyboard(LEFT, deltaTime);
+			if (keystate[SDL_SCANCODE_D])
+				camera.ProcessKeyboard(RIGHT, deltaTime);
 		}
 
 		draw();
@@ -264,10 +342,42 @@ void VulkanEngine::init_swapchain()
 	_swapchainImageViews = vkbSwapchain.get_image_views().value();
 
 	_swachainImageFormat = vkbSwapchain.image_format;
-}
 
+
+		VkExtent3D depthImageExtent = {
+        _windowExtent.width,
+        _windowExtent.height,
+        1
+    };
+
+	//hardcoding the depth format to 32 bit float
+	_depthFormat = VK_FORMAT_D32_SFLOAT;
+
+	//the depth image will be an image with the format we selected and Depth Attachment usage flag
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depthImageExtent);
+
+	//for the depth image, we want to allocate it from GPU local memory
+	VmaAllocationCreateInfo dimg_allocinfo = {};
+	dimg_allocinfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	dimg_allocinfo.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	//allocate and create the image
+	vmaCreateImage(_allocator, &dimg_info, &dimg_allocinfo, &_depthImage.image, &_depthImage.allocation, nullptr);
+
+	//build an image-view for the depth image to use for rendering
+	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(_depthFormat, _depthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_depthImageView));
+
+	//add to deletion queues
+	_mainDeletionQueue.push_function([=]() {
+		vkDestroyImageView(_device, _depthImageView, nullptr);
+		vmaDestroyImage(_allocator, _depthImage.image, _depthImage.allocation);
+	});
+}
 void VulkanEngine::init_default_renderpass()
 {
+
 	VkAttachmentDescription color_attachment = {};
 	color_attachment.format = _swachainImageFormat;
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -282,10 +392,28 @@ void VulkanEngine::init_default_renderpass()
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+	VkAttachmentDescription depth_attachment = {};
+
+	depth_attachment.flags = 0;
+	depth_attachment.format = _depthFormat;
+	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depth_attachment_ref = {};
+	depth_attachment_ref.attachment = 1;
+	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
+
+	subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
 	VkSubpassDependency dependency = {};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -295,14 +423,28 @@ void VulkanEngine::init_default_renderpass()
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
+	VkSubpassDependency depth_dependency = {};
+	depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	depth_dependency.dstSubpass = 0;
+	depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.srcAccessMask = 0;
+	depth_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	VkSubpassDependency dependencies[2] = {dependency, depth_dependency};
+
+	VkAttachmentDescription attachments[2] = {color_attachment, depth_attachment};
+
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
+
+	render_pass_info.attachmentCount = 2;
+	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-	render_pass_info.dependencyCount = 1;
-	render_pass_info.pDependencies = &dependency;
+
+	render_pass_info.dependencyCount = 2;
+	render_pass_info.pDependencies = &dependencies[0];
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
 
@@ -317,16 +459,19 @@ void VulkanEngine::init_framebuffers()
 	const uint32_t swapchain_imagecount = _swapchainImages.size();
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
-	for (int i = 0; i < swapchain_imagecount; i++)
-	{
-		fb_info.pAttachments = &_swapchainImageViews[i];
-		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
-		_mainDeletionQueue.push_function([=]()
-										 {
-			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr); });
-	}
+	for (int i = 0; i < swapchain_imagecount; i++) {
+
+    VkImageView attachments[2];
+	attachments[0] = _swapchainImageViews[i];
+	attachments[1] = _depthImageView;
+
+	fb_info.pAttachments = attachments;
+	fb_info.attachmentCount = 2;
+
+	VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 }
+}
+
 
 void VulkanEngine::init_commands()
 {
@@ -447,6 +592,8 @@ void VulkanEngine::init_pipelines()
 	pipelineBuilder._multisampling = vkinit::multisampling_state_create_info();
 	pipelineBuilder._colorBlendAttachment = vkinit::color_blend_attachment_state();
 	pipelineBuilder._pipelineLayout = _trianglePipelineLayout;
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, false, VK_COMPARE_OP_LESS_OR_EQUAL);
+	
 
 	_trianglePipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
 
@@ -494,6 +641,7 @@ void VulkanEngine::init_pipelines()
 	mesh_pipeline_layout_info.pSetLayouts = layouts;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
+	
 
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
 
@@ -517,30 +665,64 @@ void VulkanEngine::init_pipelines()
 
 void VulkanEngine::load_meshes()
 {
-	_triangleMesh._vertices.resize(6);
-
-	_triangleMesh._vertices[0].position = glm::vec3{-0.5f,  -0.5f, 0.5f};
-	_triangleMesh._vertices[1].position = glm::vec3{-0.5f, 0.5f, 0.5f};
-	_triangleMesh._vertices[2].position = glm::vec3{0.5f, 0.5f, 0.5f};
-	_triangleMesh._vertices[3].position = glm::vec3{-0.5f,  -0.5f, 0.5f};
-	_triangleMesh._vertices[4].position = glm::vec3{0.5f, 0.5f, 0.5f};
-	_triangleMesh._vertices[5].position = glm::vec3{0.5f, -0.5f, 0.5f};
+_triangleMesh._vertices.resize(36);
 
 
-	_triangleMesh._vertices[0].color = glm::vec3{1.0f, 0.0f, 0.0f};
-	_triangleMesh._vertices[1].color = glm::vec3{0.0f, 1.0f, 0.0f};
-	_triangleMesh._vertices[2].color = glm::vec3{0.0f, 0.0f, 1.0f};
-	_triangleMesh._vertices[3].color = glm::vec3{1.0f, 0.0f, 0.0f};
-	_triangleMesh._vertices[4].color = glm::vec3{0.0f, 0.0f, 1.0f};
-	_triangleMesh._vertices[5].color = glm::vec3{1.0f, 1.0f, 0.0f};
+_triangleMesh._vertices[0].position  = glm::vec3{ 1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[1].position  = glm::vec3{ 1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[2].position  = glm::vec3{ 1.0f,  1.0f, -1.0f};
+
+_triangleMesh._vertices[3].position  = glm::vec3{ 1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[4].position  = glm::vec3{ 1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[5].position  = glm::vec3{ 1.0f, -1.0f,  1.0f};
 
 
-	_triangleMesh._vertices[0].uv = glm::vec2{0.0f, 0.0f};
-	_triangleMesh._vertices[1].uv = glm::vec2{0.0f, 1.0f};
-	_triangleMesh._vertices[2].uv = glm::vec2{1.0f, 1.0f};
-	_triangleMesh._vertices[3].uv = glm::vec2{0.0f, 0.0f};
-	_triangleMesh._vertices[4].uv = glm::vec2{1.0f, 1.0f};
-	_triangleMesh._vertices[5].uv = glm::vec2{1.0f, 0.0f};
+_triangleMesh._vertices[6].position  = glm::vec3{-1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[7].position  = glm::vec3{-1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[8].position  = glm::vec3{-1.0f,  1.0f,  1.0f};
+
+_triangleMesh._vertices[9].position  = glm::vec3{-1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[10].position = glm::vec3{-1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[11].position = glm::vec3{-1.0f, -1.0f, -1.0f};
+
+
+_triangleMesh._vertices[12].position = glm::vec3{-1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[13].position = glm::vec3{ 1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[14].position = glm::vec3{ 1.0f,  1.0f, -1.0f};
+
+_triangleMesh._vertices[15].position = glm::vec3{ 1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[16].position = glm::vec3{-1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[17].position = glm::vec3{-1.0f,  1.0f,  1.0f};
+
+
+_triangleMesh._vertices[18].position = glm::vec3{-1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[19].position = glm::vec3{ 1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[20].position = glm::vec3{ 1.0f, -1.0f,  1.0f};
+
+_triangleMesh._vertices[21].position = glm::vec3{ 1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[22].position = glm::vec3{-1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[23].position = glm::vec3{-1.0f, -1.0f, -1.0f};
+
+
+_triangleMesh._vertices[24].position = glm::vec3{-1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[25].position = glm::vec3{ 1.0f, -1.0f,  1.0f};
+_triangleMesh._vertices[26].position = glm::vec3{ 1.0f,  1.0f,  1.0f};
+
+_triangleMesh._vertices[27].position = glm::vec3{ 1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[28].position = glm::vec3{-1.0f,  1.0f,  1.0f};
+_triangleMesh._vertices[29].position = glm::vec3{-1.0f, -1.0f,  1.0f};
+
+
+_triangleMesh._vertices[30].position = glm::vec3{ 1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[31].position = glm::vec3{-1.0f, -1.0f, -1.0f};
+_triangleMesh._vertices[32].position = glm::vec3{-1.0f,  1.0f, -1.0f};
+
+_triangleMesh._vertices[33].position = glm::vec3{-1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[34].position = glm::vec3{ 1.0f,  1.0f, -1.0f};
+_triangleMesh._vertices[35].position = glm::vec3{ 1.0f, -1.0f, -1.0f};
+
+
+
 
 
 	upload_mesh(_triangleMesh);
@@ -593,7 +775,7 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 
 void VulkanEngine::init_descriptors()
 {
-	// --- Scene / camera uniform buffers ---
+	
 	const size_t sceneParamBufferSize = FRAME_OVERLAP * pad_uniform_buffer_size(sizeof(GPUSceneData1));
 	GPUParameterBuffer = create_buffer(sceneParamBufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
@@ -638,7 +820,7 @@ void VulkanEngine::init_descriptors()
 
 	VK_CHECK(vkCreateDescriptorSetLayout(_device, &camSetInfo, nullptr, &_CameraSetLayout));
 
-	// --- Pool: bumped maxSets to 10 -> keep room for camera/GPU/texture sets ---
+	
 	std::vector<VkDescriptorPoolSize> sizes =
 		{
 			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 10},
@@ -675,11 +857,11 @@ void VulkanEngine::init_descriptors()
 
 	VK_CHECK(vkAllocateDescriptorSets(_device, &gpuAllocInfo, &GPUDescriptor));
 
-	// --- Texture: load image, sampler, and set 2 descriptor ---
-	// NOTE: TextureDescriptor, _blockySampler, and _texture (AllocatedImage) +
-	// _textureImageView (VkImageView) need to be added as members in vk_engine.h.
-	// Initialize TextureDescriptor = VK_NULL_HANDLE in the header so draw() can
-	// safely skip binding if loading fails.
+	
+	
+	
+	
+	
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_NEAREST);
 	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_blockySampler));
@@ -687,7 +869,7 @@ void VulkanEngine::init_descriptors()
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroySampler(_device, _blockySampler, nullptr); });
 
-	bool texLoaded = vkutil::load_image_from_file(*this, "assets/texture.jpeg", _texture);
+	bool texLoaded = vkutil::load_image_from_file(*this, "assets/skybox/skybox.png", _texture);
 
 	if (texLoaded)
 	{
