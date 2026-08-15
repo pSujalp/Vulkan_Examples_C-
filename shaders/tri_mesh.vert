@@ -20,7 +20,6 @@ layout( push_constant ) uniform constants
 } PushConstants;
 
 
-
 void main()
 {
 	gl_Position = (cameraData.mvp * vec4(vPosition, 1.0f)).xyww;
