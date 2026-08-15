@@ -23,6 +23,6 @@ layout( push_constant ) uniform constants
 
 void main()
 {
-	gl_Position = cameraData.mvp * vec4(vPosition, 1.0f);
+	gl_Position = (cameraData.mvp * vec4(vPosition, 1.0f)).xyww;
 	inDir = (vPosition);
 }
