@@ -122,6 +122,11 @@ public:
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
 
+
+	UploadContext _uploadContext;
+
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
+
 	Camera camera;
 
 	

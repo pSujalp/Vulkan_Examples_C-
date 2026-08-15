@@ -91,6 +91,12 @@ struct Vertex {
 	static VertexInputDescription get_vertex_description();
 };
 
+struct UploadContext {
+	VkFence _uploadFence;
+	VkCommandPool _commandPool;
+	VkCommandBuffer _commandBuffer;
+};
+
 // holds the resources needed for a mesh
 struct GPUMeshBuffers {
 
