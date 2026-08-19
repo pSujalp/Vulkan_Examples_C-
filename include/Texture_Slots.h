@@ -85,9 +85,7 @@ public:
 	{
 		VkDescriptorSetLayout _TextureSetLayout = VK_NULL_HANDLE;
 		VkDescriptorSet TextureDescriptor = VK_NULL_HANDLE;
-
 		VkDescriptorSetLayoutBinding textureBind = vkinit::descriptorset_layout_binding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, bind);
-
 		VkDescriptorSetLayoutCreateInfo set3info = {};
 		set3info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		set3info.bindingCount = 1;

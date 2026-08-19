@@ -118,9 +118,7 @@ void VulkanEngine::draw()
 	VkCommandBufferBeginInfo cmdBeginInfo = vkinit::command_buffer_begin_info(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
-
 	VkDeviceSize offset = 0;
-
 	VkClearValue offscreenColorClear;
 	offscreenColorClear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
@@ -134,16 +132,12 @@ void VulkanEngine::draw()
 
 	rpInfoOffscreen.clearValueCount = 2;
 	rpInfoOffscreen.pClearValues = offscreenClears;
-
+	
 	vkCmdBeginRenderPass(cmd, &rpInfoOffscreen, VK_SUBPASS_CONTENTS_INLINE);
-
-	for (const auto &i : txs.TextureDescriptor_map)
-	{
+	for (const auto &i : txs.TextureDescriptor_map){
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
-
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
-
 	for (const auto &i : _ModelMeshes)
 	{
 
@@ -188,19 +182,14 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	for (const auto &i : Offtxs.TextureDescriptor_map)
-	{
+	for (const auto &i : Offtxs.TextureDescriptor_map){
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _QuadPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _QuadPipeline);
-
 	vkCmdBindVertexBuffers(cmd, 0, 1, &QuadMesh._vertexBuffer._buffer, &offset);
-
 	vkCmdDraw(cmd, QuadMesh._vertices.size(), 1, 0, 0);
-
 	vkCmdEndRenderPass(cmd);
-
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
 	VkSubmitInfo submit = vkinit::submit_info(&cmd);
@@ -912,7 +901,6 @@ void VulkanEngine::upload_mesh(Mesh &mesh)
 	vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
 
 	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
-
 	vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
 }
 
@@ -977,15 +965,11 @@ void VulkanEngine::init_offscreen()
 
 	vmaCreateImage(_allocator, &img_info, &img_alloc_info,
 				   &_offscreenImage.image, &_offscreenImage.allocation, nullptr);
-
 	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(
 		_offscreenFormat, _offscreenImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
-
 	VK_CHECK(vkCreateImageView(_device, &view_info, nullptr, &_offscreenImageView));
-
 	VkImageCreateInfo dimg_info = vkinit::image_create_info(
 		_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, offscreenExtent);
-
 	VmaAllocationCreateInfo dimg_alloc_info = {};
 	dimg_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	dimg_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -1000,7 +984,6 @@ void VulkanEngine::init_offscreen()
 
 	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
 	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_offscreenSampler));
-
 	VkImageView attachments[2] = {_offscreenImageView, _offscreenDepthImageView};
 
 	VkFramebufferCreateInfo fb_info = {};
@@ -1011,11 +994,10 @@ void VulkanEngine::init_offscreen()
 	fb_info.width = _windowExtent.width;
 	fb_info.height = _windowExtent.height;
 	fb_info.layers = 1;
-
 	VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_offscreenFramebuffer));
+	
 
-	_mainDeletionQueue.push_function([=]()
-									 {
+	_mainDeletionQueue.push_function([=](){
 		vkDestroySampler(_device, _offscreenSampler, nullptr);
 		vkDestroyFramebuffer(_device, _offscreenFramebuffer, nullptr);
 		vkDestroyImageView(_device, _offscreenImageView, nullptr);
