@@ -1,5 +1,4 @@
-﻿// vulkan_guide.h : Include file for standard system include files,
-// or project specific include files.
+﻿
 
 #pragma once
 
@@ -10,22 +9,22 @@
 #include <glm/gtx/transform.hpp>
 #include "camera.h"
 
-
 #include "vk_textures.h"
 #include "Texture_Slots.h"
 #include "ufbx.h"
 #include "FBX_Model_Loader.h"
 
+#include <stb_image_write.h>
 
-class VulkanEngine {
+class VulkanEngine
+{
 public:
+	bool _isInitialized{false};
+	int _frameNumber{0};
 
-	bool _isInitialized{ false };
-	int _frameNumber {0};
+	VkExtent2D _windowExtent{};
 
-	VkExtent2D _windowExtent{  };
-
-	struct SDL_Window* _window{ nullptr };
+	struct SDL_Window *_window{nullptr};
 
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
@@ -40,8 +39,9 @@ public:
 
 	VkCommandPool _commandPool;
 	VkCommandBuffer _mainCommandBuffer;
-	
+
 	VkRenderPass _renderPass;
+	VkRenderPass _OffScreen_renderPass;
 
 	VkSurfaceKHR _surface;
 	VkSwapchainKHR _swapchain;
@@ -51,36 +51,47 @@ public:
 	std::vector<VkImage> _swapchainImages;
 	std::vector<VkImageView> _swapchainImageViews;
 
-
 	VkPipeline _trianglePipeline;
 
 	DeletionQueue _mainDeletionQueue;
 
 	VmaAllocator _allocator;
 
-
 	VkPipeline _meshPipeline;
-
 
 	std::vector<Mesh> _ModelMeshes;
 
-
 	void load_meshes();
+	void upload_mesh(Mesh &mesh);
 
-	void upload_mesh(std::vector<Mesh>& mesh);
+	void load_Quadmesh();
+	Mesh QuadMesh;
+	VkPipeline _QuadPipeline;
+	VkPipelineLayout _QuadPipelineLayout;
+	AllocatedImage _OffScreentexture;
+
+	AllocatedImage _offscreenImage;
+	VkImageView _offscreenImageView;
+	VkFramebuffer _offscreenFramebuffer;
+	VkFormat _offscreenFormat = VK_FORMAT_R8G8B8A8_UNORM;
+	VkSampler _offscreenSampler;
+
+	AllocatedImage _offscreenDepthImage;
+	VkImageView _offscreenDepthImageView;
+
+	void init_offscreen();
+
+	void upload_mesh(std::vector<Mesh> &mesh);
 
 	void init();
 
-	//shuts down the engine
 	void cleanup();
 
-	//draw loop
 	void draw();
 
-	//run main loop
 	void run();
 
-	bool load_shader_module(const char* filePath, VkShaderModule* outShaderModule);
+	bool load_shader_module(const char *filePath, VkShaderModule *outShaderModule);
 
 	void init_pipelines();
 
@@ -98,24 +109,22 @@ public:
 	VkSampler _blockySampler;
 	AllocatedImage _texture;
 	VkImageView _textureImageView;
-	
 
 	VkDescriptorSetLayout _mixsingleTextureSetLayout;
 	VkDescriptorSet TextureDescriptor1 = VK_NULL_HANDLE;
 	AllocatedImage _texture1;
 	VkImageView _textureImageView1;
 
-	
 	Camera camera;
 	Texture_Slots txs;
 
-    VkImageView _depthImageView;
+	Texture_Slots Offtxs;
+
+	VkImageView _depthImageView;
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
 
-	
 private:
-
 	void init_vulkan();
 
 	void init_swapchain();

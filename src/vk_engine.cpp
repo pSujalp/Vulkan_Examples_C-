@@ -1,5 +1,4 @@
-﻿
-#include "vk_engine.h"
+﻿#include "vk_engine.h"
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -20,13 +19,13 @@ void VulkanEngine::init()
 	SDL_Init(SDL_INIT_VIDEO);
 
 	SDL_DisplayMode dm;
-if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
-    _windowExtent.height= dm.h;
-	_windowExtent.width = dm.w;
-  
-}
-    
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN ) ;
+	if (SDL_GetCurrentDisplayMode(0, &dm) == 0)
+	{
+		_windowExtent.height = dm.h;
+		_windowExtent.width = dm.w;
+	}
+
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
 	_window = SDL_CreateWindow(
 		"Vulkan Engine",
@@ -48,11 +47,15 @@ if (SDL_GetCurrentDisplayMode(0, &dm) == 0) {
 
 	init_sync_structures();
 
+	init_offscreen();
+
 	init_descriptor();
 
 	init_pipelines();
 
 	load_meshes();
+
+	load_Quadmesh();
 
 	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
 
@@ -116,22 +119,23 @@ void VulkanEngine::draw()
 
 	VK_CHECK(vkBeginCommandBuffer(cmd, &cmdBeginInfo));
 
-	VkClearValue clearValue;
+	VkDeviceSize offset = 0;
 
-	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+	VkClearValue offscreenColorClear;
+	offscreenColorClear.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
-	VkClearValue depthClear;
-	depthClear.depthStencil.depth = 1.f;
+	VkClearValue offscreenDepthClear;
+	offscreenDepthClear.depthStencil.depth = 1.f;
 
-	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
+	VkClearValue offscreenClears[] = {offscreenColorClear, offscreenDepthClear};
 
-	rpInfo.clearValueCount = 2;
+	VkRenderPassBeginInfo rpInfoOffscreen = vkinit::renderpass_begin_info(
+		_OffScreen_renderPass, _windowExtent, _offscreenFramebuffer);
 
-		VkClearValue clearValues[] = { clearValue, depthClear };
+	rpInfoOffscreen.clearValueCount = 2;
+	rpInfoOffscreen.pClearValues = offscreenClears;
 
-	rpInfo.pClearValues = &clearValues[0];
-
-	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(cmd, &rpInfoOffscreen, VK_SUBPASS_CONTENTS_INLINE);
 
 	for (const auto &i : txs.TextureDescriptor_map)
 	{
@@ -140,8 +144,6 @@ void VulkanEngine::draw()
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
-	VkDeviceSize offset = 0;
-
 	for (const auto &i : _ModelMeshes)
 	{
 
@@ -149,16 +151,15 @@ void VulkanEngine::draw()
 		vkCmdBindIndexBuffer(cmd, i._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), 1700.f / 900.f, 0.1f, 200.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
+												(float)_windowExtent.width / (float)_windowExtent.height, 0.1f, 200.0f);
 		projection[1][1] *= -1;
 
 		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
 
-		model = glm::translate(model,glm::vec3(50,0,-40));
+		model = glm::translate(model, glm::vec3(50, 0, -40));
 
 		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
-
-		
 
 		glm::mat4 mesh_matrix = projection * view * model;
 
@@ -172,13 +173,39 @@ void VulkanEngine::draw()
 
 	vkCmdEndRenderPass(cmd);
 
+	VkClearValue clearValue;
+	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+
+	VkClearValue depthClear;
+	depthClear.depthStencil.depth = 1.f;
+
+	VkClearValue clearValues[] = {clearValue, depthClear};
+
+	VkRenderPassBeginInfo rpInfo = vkinit::renderpass_begin_info(_renderPass, _windowExtent, _framebuffers[swapchainImageIndex]);
+
+	rpInfo.clearValueCount = 2;
+	rpInfo.pClearValues = clearValues;
+
+	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	for (const auto &i : Offtxs.TextureDescriptor_map)
+	{
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _QuadPipelineLayout, i.second, 1, &i.first, 0, nullptr);
+	}
+
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _QuadPipeline);
+
+	vkCmdBindVertexBuffers(cmd, 0, 1, &QuadMesh._vertexBuffer._buffer, &offset);
+
+	vkCmdDraw(cmd, QuadMesh._vertices.size(), 1, 0, 0);
+
+	vkCmdEndRenderPass(cmd);
+
 	VK_CHECK(vkEndCommandBuffer(cmd));
 
 	VkSubmitInfo submit = vkinit::submit_info(&cmd);
 	VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
 	submit.pWaitDstStageMask = &waitStage;
-
 	submit.waitSemaphoreCount = 1;
 	submit.pWaitSemaphores = &_presentSemaphore;
 
@@ -223,7 +250,7 @@ void VulkanEngine::run()
 		NOW = SDL_GetPerformanceCounter();
 		deltaTime = (double)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
 
-		string str = "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)1 / deltaTime);
+		string str = "Vulkan Tutorial \t\t\t\t\t\t\t\t\t\t\t\t\t\t FPS:" + to_string((int)(1 / deltaTime));
 		SDL_SetWindowTitle(_window, str.c_str());
 
 		while (SDL_PollEvent(&e) != 0)
@@ -441,24 +468,89 @@ void VulkanEngine::init_default_renderpass()
 	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
-
 	render_pass_info.dependencyCount = 2;
 	render_pass_info.pDependencies = &dependencies[0];
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_renderPass));
-
 	_mainDeletionQueue.push_function([=]()
 									 { vkDestroyRenderPass(_device, _renderPass, nullptr); });
+
+	VkAttachmentDescription offscreen_color = {};
+	offscreen_color.format = _offscreenFormat;
+	offscreen_color.samples = VK_SAMPLE_COUNT_1_BIT;
+	offscreen_color.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	offscreen_color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	offscreen_color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	offscreen_color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	offscreen_color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	offscreen_color.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkAttachmentReference offscreen_color_ref = {};
+	offscreen_color_ref.attachment = 0;
+	offscreen_color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentDescription offscreen_depth = {};
+	offscreen_depth.format = _depthFormat;
+	offscreen_depth.samples = VK_SAMPLE_COUNT_1_BIT;
+	offscreen_depth.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	offscreen_depth.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	offscreen_depth.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	offscreen_depth.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	offscreen_depth.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	offscreen_depth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference offscreen_depth_ref = {};
+	offscreen_depth_ref.attachment = 1;
+	offscreen_depth_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription offscreen_subpass = {};
+	offscreen_subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	offscreen_subpass.colorAttachmentCount = 1;
+	offscreen_subpass.pColorAttachments = &offscreen_color_ref;
+	offscreen_subpass.pDepthStencilAttachment = &offscreen_depth_ref;
+
+	VkSubpassDependency offscreen_dep_in = {};
+	offscreen_dep_in.srcSubpass = VK_SUBPASS_EXTERNAL;
+	offscreen_dep_in.dstSubpass = 0;
+	offscreen_dep_in.srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	offscreen_dep_in.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+	offscreen_dep_in.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	offscreen_dep_in.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	VkSubpassDependency offscreen_dep_out = {};
+	offscreen_dep_out.srcSubpass = 0;
+	offscreen_dep_out.dstSubpass = VK_SUBPASS_EXTERNAL;
+	offscreen_dep_out.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	offscreen_dep_out.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+	offscreen_dep_out.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	offscreen_dep_out.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+	VkSubpassDependency offscreen_deps[2] = {offscreen_dep_in, offscreen_dep_out};
+	VkAttachmentDescription offscreen_attachments[2] = {offscreen_color, offscreen_depth};
+
+	VkRenderPassCreateInfo offscreen_rp_info = {};
+	offscreen_rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	offscreen_rp_info.attachmentCount = 2;
+	offscreen_rp_info.pAttachments = offscreen_attachments;
+	offscreen_rp_info.subpassCount = 1;
+	offscreen_rp_info.pSubpasses = &offscreen_subpass;
+	offscreen_rp_info.dependencyCount = 2;
+	offscreen_rp_info.pDependencies = offscreen_deps;
+
+	VK_CHECK(vkCreateRenderPass(_device, &offscreen_rp_info, nullptr, &_OffScreen_renderPass));
+	_mainDeletionQueue.push_function([=]()
+									 { vkDestroyRenderPass(_device, _OffScreen_renderPass, nullptr); });
 }
 void VulkanEngine::init_framebuffers()
 {
-	//create the framebuffers for the swapchain images. This will connect the render-pass to the images for rendering
+
 	VkFramebufferCreateInfo fb_info = vkinit::framebuffer_create_info(_renderPass, _windowExtent);
 
 	const uint32_t swapchain_imagecount = _swapchainImages.size();
 	_framebuffers = std::vector<VkFramebuffer>(swapchain_imagecount);
 
-	for (int i = 0; i < swapchain_imagecount; i++) {
+	for (int i = 0; i < swapchain_imagecount; i++)
+	{
 
 		VkImageView attachments[2];
 		attachments[0] = _swapchainImageViews[i];
@@ -468,10 +560,10 @@ void VulkanEngine::init_framebuffers()
 		fb_info.attachmentCount = 2;
 		VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_framebuffers[i]));
 
-		_mainDeletionQueue.push_function([=]() {
+		_mainDeletionQueue.push_function([=]()
+										 {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr);
-		});
+			vkDestroyImageView(_device, _swapchainImageViews[i], nullptr); });
 	}
 }
 
@@ -548,7 +640,6 @@ bool VulkanEngine::load_shader_module(const char *filePath, VkShaderModule *outS
 
 void VulkanEngine::init_pipelines()
 {
-
 	VkShaderModule triangleFragShader;
 	if (!load_shader_module("shaders/triangle_frag.frag.spv", &triangleFragShader))
 	{
@@ -632,12 +723,8 @@ void VulkanEngine::init_pipelines()
 
 	pipelineBuilder._shaderStages.push_back(
 		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangleFragShader));
-	
-	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
-	VkDescriptorSetLayout layouts[] = {
-		_singleTextureSetLayout,
-		_mixsingleTextureSetLayout};
+	pipelineBuilder._depthStencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
 	VkPipelineLayoutCreateInfo mesh_pipeline_layout_info = {};
 	mesh_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -652,25 +739,71 @@ void VulkanEngine::init_pipelines()
 	mesh_pipeline_layout_info.pPushConstantRanges = &push_constant;
 	mesh_pipeline_layout_info.pushConstantRangeCount = 1;
 
-	
-
 	VK_CHECK(vkCreatePipelineLayout(_device, &mesh_pipeline_layout_info, nullptr, &_meshPipelineLayout));
 
 	pipelineBuilder._pipelineLayout = _meshPipelineLayout;
-	_meshPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
+	_meshPipeline = pipelineBuilder.build_pipeline(_device, _OffScreen_renderPass);
+
+	VkShaderModule QuadVertShader;
+	VkShaderModule QuadFragShader;
+	if (!load_shader_module("shaders/Quad_mesh.vert.spv", &QuadVertShader))
+	{
+		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+	}
+	else
+	{
+		std::cout << "Red Triangle vertex shader successfully loaded" << std::endl;
+	}
+	if (!load_shader_module("shaders/Quad_mesh.frag.spv", &QuadFragShader))
+	{
+		std::cout << "Error when building the triangle vertex shader module" << std::endl;
+	}
+	else
+	{
+		std::cout << "Red Triangle vertex shader successfully loaded" << std::endl;
+	}
+	pipelineBuilder._shaderStages.clear();
+
+	pipelineBuilder._shaderStages.push_back(
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, QuadVertShader));
+
+	pipelineBuilder._shaderStages.push_back(
+		vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, QuadFragShader));
+
+	VkPipelineLayoutCreateInfo quad_pipeline_layout_info = {};
+	quad_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+	quad_pipeline_layout_info.pNext = nullptr;
+	quad_pipeline_layout_info.setLayoutCount = Offtxs.vkVkDescriptorSet_array.size();
+	quad_pipeline_layout_info.pSetLayouts = Offtxs.vkVkDescriptorSet_array.data();
+
+	push_constant.offset = 0;
+	push_constant.size = 0;
+	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	quad_pipeline_layout_info.pPushConstantRanges = &push_constant;
+	quad_pipeline_layout_info.pushConstantRangeCount = 0;
+
+	VK_CHECK(vkCreatePipelineLayout(_device, &quad_pipeline_layout_info, nullptr, &_QuadPipelineLayout));
+	pipelineBuilder._pipelineLayout = _QuadPipelineLayout;
+
+	_QuadPipeline = pipelineBuilder.build_pipeline(_device, _renderPass);
+
 	vkDestroyShaderModule(_device, triangleFragShader, nullptr);
 	vkDestroyShaderModule(_device, triangleVertexShader, nullptr);
 	vkDestroyShaderModule(_device, meshVertShader, nullptr);
+	vkDestroyShaderModule(_device, QuadVertShader, nullptr);
+	vkDestroyShaderModule(_device, QuadFragShader, nullptr);
 
 	_mainDeletionQueue.push_function([=]()
 									 {
-        vkDestroyPipeline(_device, _trianglePipeline, nullptr);
-		vkDestroyPipeline(_device, _meshPipeline, nullptr);
-
-		vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr); });
+										 vkDestroyPipeline(_device, _trianglePipeline, nullptr);
+										 vkDestroyPipeline(_device, _meshPipeline, nullptr);
+										 vkDestroyPipeline(_device, _QuadPipeline, nullptr); });
 
 	_mainDeletionQueue.push_function([=]()
-									 { vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr); });
+									 { vkDestroyPipelineLayout(_device, _meshPipelineLayout, nullptr);
+									   vkDestroyPipelineLayout(_device, _QuadPipelineLayout, nullptr);
+									   vkDestroyPipelineLayout(_device, _trianglePipelineLayout, nullptr); });
 }
 
 void VulkanEngine::load_meshes()
@@ -684,9 +817,6 @@ void VulkanEngine::load_meshes()
 	}
 	upload_mesh(_ModelMeshes);
 }
-
-
-
 
 void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 {
@@ -705,8 +835,6 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 						&model_meshes[i]._vertexBuffer._buffer,
 						&model_meshes[i]._vertexBuffer._allocation,
 						nullptr);
-		_mainDeletionQueue.push_function([=]()
-										 { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
 		_mainDeletionQueue.push_function([=]()
 										 { vmaDestroyBuffer(_allocator, model_meshes[i]._vertexBuffer._buffer, model_meshes[i]._vertexBuffer._allocation); });
 
@@ -738,9 +866,55 @@ void VulkanEngine::upload_mesh(std::vector<Mesh> &model_meshes)
 	}
 }
 
+void VulkanEngine::load_Quadmesh()
+{
+	QuadMesh._vertices.resize(6);
 
+	QuadMesh._vertices[0].position = glm::vec3{-1.0f, 1.0f, 0.0f};
+	QuadMesh._vertices[1].position = glm::vec3{-1.0f, -1.0f, 0.0f};
+	QuadMesh._vertices[2].position = glm::vec3{1.0f, -1.0f, 0.0f};
+	QuadMesh._vertices[3].position = glm::vec3{-1.0f, 1.0f, 0.0f};
+	QuadMesh._vertices[4].position = glm::vec3{1.0f, -1.0f, 0.0f};
+	QuadMesh._vertices[5].position = glm::vec3{1.0f, 1.0f, 0.0f};
 
+	QuadMesh._vertices[0].uv = glm::vec2{0.0f, 1.0f};
+	QuadMesh._vertices[1].uv = glm::vec2{0.0f, 0.0f};
+	QuadMesh._vertices[2].uv = glm::vec2{1.0f, 0.0f};
+	QuadMesh._vertices[3].uv = glm::vec2{0.0f, 1.0f};
+	QuadMesh._vertices[4].uv = glm::vec2{1.0f, 0.0f};
+	QuadMesh._vertices[5].uv = glm::vec2{1.0f, 1.0f};
 
+	upload_mesh(QuadMesh);
+}
+
+void VulkanEngine::upload_mesh(Mesh &mesh)
+{
+
+	VkBufferCreateInfo bufferInfo = {};
+	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+
+	bufferInfo.size = mesh._vertices.size() * sizeof(Vertex);
+
+	bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+	VmaAllocationCreateInfo vmaallocInfo = {};
+	vmaallocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+	vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo,
+					&mesh._vertexBuffer._buffer,
+					&mesh._vertexBuffer._allocation,
+					nullptr);
+
+	_mainDeletionQueue.push_function([=]()
+									 { vmaDestroyBuffer(_allocator, mesh._vertexBuffer._buffer, mesh._vertexBuffer._allocation); });
+
+	void *data;
+	vmaMapMemory(_allocator, mesh._vertexBuffer._allocation, &data);
+
+	memcpy(data, mesh._vertices.data(), mesh._vertices.size() * sizeof(Vertex));
+
+	vmaUnmapMemory(_allocator, mesh._vertexBuffer._allocation);
+}
 
 AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage)
 {
@@ -763,8 +937,6 @@ AllocatedBuffer VulkanEngine::create_buffer(size_t allocSize, VkBufferUsageFlags
 	return newBuffer;
 }
 
-
-
 void VulkanEngine::init_descriptor()
 {
 	std::vector<VkDescriptorPoolSize> sizes =
@@ -779,11 +951,75 @@ void VulkanEngine::init_descriptor()
 	pool_info.maxSets = 10;
 	pool_info.poolSizeCount = (uint32_t)sizes.size();
 	pool_info.pPoolSizes = sizes.data();
-
 	vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptorPool);
 
 	bool texLoaded = vkutil::load_image_from_file(*this, "assets/car_low.png", _texture);
 
 	txs = Texture_Slots(_device, _mainDeletionQueue, _descriptorPool);
 	txs.Add(_texture, 0, 0);
+
+	Offtxs = Texture_Slots(_device, _mainDeletionQueue, _descriptorPool);
+	Offtxs.Add(_offscreenImageView, _offscreenSampler, 0, 0);
+}
+
+void VulkanEngine::init_offscreen()
+{
+	VkExtent3D offscreenExtent = {_windowExtent.width, _windowExtent.height, 1};
+
+	VkImageCreateInfo img_info = vkinit::image_create_info(
+		_offscreenFormat,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+		offscreenExtent);
+
+	VmaAllocationCreateInfo img_alloc_info = {};
+	img_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	img_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(_allocator, &img_info, &img_alloc_info,
+				   &_offscreenImage.image, &_offscreenImage.allocation, nullptr);
+
+	VkImageViewCreateInfo view_info = vkinit::imageview_create_info(
+		_offscreenFormat, _offscreenImage.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &view_info, nullptr, &_offscreenImageView));
+
+	VkImageCreateInfo dimg_info = vkinit::image_create_info(
+		_depthFormat, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, offscreenExtent);
+
+	VmaAllocationCreateInfo dimg_alloc_info = {};
+	dimg_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	dimg_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(_allocator, &dimg_info, &dimg_alloc_info,
+				   &_offscreenDepthImage.image, &_offscreenDepthImage.allocation, nullptr);
+
+	VkImageViewCreateInfo dview_info = vkinit::imageview_create_info(
+		_depthFormat, _offscreenDepthImage.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &dview_info, nullptr, &_offscreenDepthImageView));
+
+	VkSamplerCreateInfo samplerInfo = vkinit::sampler_create_info(VK_FILTER_LINEAR);
+	VK_CHECK(vkCreateSampler(_device, &samplerInfo, nullptr, &_offscreenSampler));
+
+	VkImageView attachments[2] = {_offscreenImageView, _offscreenDepthImageView};
+
+	VkFramebufferCreateInfo fb_info = {};
+	fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	fb_info.renderPass = _OffScreen_renderPass;
+	fb_info.attachmentCount = 2;
+	fb_info.pAttachments = attachments;
+	fb_info.width = _windowExtent.width;
+	fb_info.height = _windowExtent.height;
+	fb_info.layers = 1;
+
+	VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_offscreenFramebuffer));
+
+	_mainDeletionQueue.push_function([=]()
+									 {
+		vkDestroySampler(_device, _offscreenSampler, nullptr);
+		vkDestroyFramebuffer(_device, _offscreenFramebuffer, nullptr);
+		vkDestroyImageView(_device, _offscreenImageView, nullptr);
+		vmaDestroyImage(_allocator, _offscreenImage.image, _offscreenImage.allocation);
+		vkDestroyImageView(_device, _offscreenDepthImageView, nullptr);
+		vmaDestroyImage(_allocator, _offscreenDepthImage.image, _offscreenDepthImage.allocation); });
 }
