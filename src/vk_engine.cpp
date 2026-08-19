@@ -138,6 +138,9 @@ void VulkanEngine::draw()
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
+
+
+
 	for (const auto &i : _ModelMeshes)
 	{
 
@@ -149,11 +152,9 @@ void VulkanEngine::draw()
 												(float)_windowExtent.width / (float)_windowExtent.height, 0.1f, 200.0f);
 		projection[1][1] *= -1;
 
-		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(90.0f), glm::vec3(0, 1, 1));
-
-		model = glm::translate(model, glm::vec3(50, 0, -40));
-
-		model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));
+		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		model = glm::translate(model, glm::vec3(0, 0, -40));
+		model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
 
 		glm::mat4 mesh_matrix = projection * view * model;
 
@@ -167,7 +168,7 @@ void VulkanEngine::draw()
 
 	vkCmdEndRenderPass(cmd);
 
-	VkClearValue clearValue;
+	VkClearValue clearValue;	
 	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
 	VkClearValue depthClear;
@@ -798,7 +799,7 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	FBX_Model_Loader fbxl = FBX_Model_Loader("assets/car_low.fbx");
+	FBX_Model_Loader fbxl = FBX_Model_Loader("assets/cube_animations.fbx");
 
 	for (const auto &i : fbxl.Meshes)
 	{
