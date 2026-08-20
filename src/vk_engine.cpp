@@ -59,6 +59,9 @@ void VulkanEngine::init()
 
 	camera = Camera(glm::vec3(0.f, 0.f, 2.f));
 
+	iterator = fbx_anim.nodes_transforms.begin();
+	time_range_itr = fbx_anim.serial_timerange.begin();
+
 	_isInitialized = true;
 }
 void VulkanEngine::cleanup()
@@ -132,20 +135,25 @@ void VulkanEngine::draw()
 
 	rpInfoOffscreen.clearValueCount = 2;
 	rpInfoOffscreen.pClearValues = offscreenClears;
-	
+
 	vkCmdBeginRenderPass(cmd, &rpInfoOffscreen, VK_SUBPASS_CONTENTS_INLINE);
-	for (const auto &i : txs.TextureDescriptor_map){
+	for (const auto &i : txs.TextureDescriptor_map)
+	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _meshPipeline);
 
+	if(iterator != fbx_anim.nodes_transforms.end() ){
+		// std::cout << iterator->first->mesh->element_id<< "\n";
+		++iterator;
+	}
+	else iterator = fbx_anim.nodes_transforms.begin();
 
-
-	for (const auto &i : _ModelMeshes)
+	for (const auto &model_i : _ModelMeshes)
 	{
 
-		vkCmdBindVertexBuffers(cmd, 0, 1, &i._vertexBuffer._buffer, &offset);
-		vkCmdBindIndexBuffer(cmd, i._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(cmd, 0, 1, &model_i._vertexBuffer._buffer, &offset);
+		vkCmdBindIndexBuffer(cmd, model_i._indexBuffer._buffer, 0, VK_INDEX_TYPE_UINT32);
 
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom),
@@ -155,20 +163,17 @@ void VulkanEngine::draw()
 		glm::mat4 model = glm::rotate(glm::mat4{1.0f}, glm::radians(0.0f), glm::vec3(0, 1, 0));
 		model = glm::translate(model, glm::vec3(0, 0, -40));
 		model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
-
 		glm::mat4 mesh_matrix = projection * view * model;
-
 		MeshPushConstants constants;
 		constants.render_matrix = mesh_matrix;
 
 		vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPushConstants), &constants);
-
-		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(i._indices.size()), 1, 0, 0, 0);
+		vkCmdDrawIndexed(cmd, static_cast<uint32_t>(model_i._indices.size()), 1, 0, 0, 0);
 	}
 
 	vkCmdEndRenderPass(cmd);
 
-	VkClearValue clearValue;	
+	VkClearValue clearValue;
 	clearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
 	VkClearValue depthClear;
@@ -183,7 +188,8 @@ void VulkanEngine::draw()
 
 	vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-	for (const auto &i : Offtxs.TextureDescriptor_map){
+	for (const auto &i : Offtxs.TextureDescriptor_map)
+	{
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, _QuadPipelineLayout, i.second, 1, &i.first, 0, nullptr);
 	}
 
@@ -217,6 +223,11 @@ void VulkanEngine::draw()
 	VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
 
 	_frameNumber++;
+
+	time_range_itr++;
+
+	if (time_range_itr == fbx_anim.serial_timerange.end())
+		time_range_itr = fbx_anim.serial_timerange.begin();
 }
 
 void VulkanEngine::run()
@@ -799,12 +810,13 @@ void VulkanEngine::init_pipelines()
 void VulkanEngine::load_meshes()
 {
 
-	FBX_Model_Loader fbxl = FBX_Model_Loader("assets/cube_animations.fbx");
+	fbxl = FBX_Model_Loader("assets/cube_animations.fbx");
 
 	for (const auto &i : fbxl.Meshes)
 	{
 		_ModelMeshes.emplace_back(i.first);
 	}
+	fbx_anim = FBX_ANIM::FBX_ANIMATION(fbxl.scene);
 	upload_mesh(_ModelMeshes);
 }
 
@@ -996,9 +1008,9 @@ void VulkanEngine::init_offscreen()
 	fb_info.height = _windowExtent.height;
 	fb_info.layers = 1;
 	VK_CHECK(vkCreateFramebuffer(_device, &fb_info, nullptr, &_offscreenFramebuffer));
-	
 
-	_mainDeletionQueue.push_function([=](){
+	_mainDeletionQueue.push_function([=]()
+									 {
 		vkDestroySampler(_device, _offscreenSampler, nullptr);
 		vkDestroyFramebuffer(_device, _offscreenFramebuffer, nullptr);
 		vkDestroyImageView(_device, _offscreenImageView, nullptr);

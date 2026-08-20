@@ -13,6 +13,7 @@
 #include "Texture_Slots.h"
 #include "ufbx.h"
 #include "FBX_Model_Loader.h"
+#include "FBX_Anim.h"
 
 #include <stb_image_write.h>
 
@@ -123,6 +124,15 @@ public:
 	VkImageView _depthImageView;
 	AllocatedImage _depthImage;
 	VkFormat _depthFormat;
+
+
+	FBX_ANIM::FBX_ANIMATION fbx_anim ;
+	FBX_Model_Loader fbxl ;
+
+
+
+	std::unordered_map<ufbx_node *, std::map<double, ufbx_transform>>::const_iterator iterator;
+	std::set<double>::const_iterator time_range_itr;
 
 private:
 	void init_vulkan();

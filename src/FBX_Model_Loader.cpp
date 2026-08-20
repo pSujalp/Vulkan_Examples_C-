@@ -13,8 +13,11 @@ FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
     std::vector<uint32_t> tri_indices;
 
     for (ufbx_mesh *mesh : scene->meshes)
-    {
-        printf("mesh '%s'\n", mesh->name.data);
+    {    
+        printf("mesh '%d'\n", mesh->element_id);
+
+
+        mesh_element_id[mesh] = mesh->element_id;
 
         tri_indices.resize(mesh->max_face_triangles * 3);
 
@@ -36,9 +39,7 @@ FBX_Model_Loader::FBX_Model_Loader(const std::string &filepath)
                 ufbx_face face = mesh->faces[face_index];
                 uint32_t num_tris = ufbx_triangulate_face(
                     tri_indices.data(), tri_indices.size(), mesh, face);
-
-                for (size_t i = 0; i < num_tris * 3; i++)
-                {
+                for (size_t i = 0; i < num_tris * 3; i++){
                     uint32_t index = tri_indices[i];
 
                     Vertex v{};
